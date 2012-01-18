@@ -676,7 +676,7 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	                                  			_ -> {false,[],Dict}
 	                             			end
 	                   		end
-	            	end
+	            	end;
 	    	{{term,TermP},_} -> 	
 	        	case TermP of
 	             		{var,_,V}-> 	case V of
