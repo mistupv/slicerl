@@ -8,7 +8,6 @@
 % Enganchar el input al nodo que defineix la funci贸 que es crida i no de al return
 % summaries
 % utilitzar la info del graph matching per confirmar que fan matching (stong i weak)						
-											
 %PROBLEMA: No s'estan afegint les variables que es declaren en arguments
 
 -module(slicErlang).
