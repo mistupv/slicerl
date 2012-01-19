@@ -1,19 +1,14 @@
 %c(slicErlang),c(slicErlangDot),slicErlang:start(0),slicErlangDot:start(0).
 						%c(slicErlang),c(slicErlangDot),c(slicErlangSlice),slicErlang:start(0),slicErlangDot:start(0),slicErlangSlice:start(0).
-						%assadsa
-						
+						%assadsa						
 						
 %TODO:
 % Suport a les list comprehension desde la transformacio per als tipos esta per tractar
 % Millorar la precisio al obtenir les posibles funcions a aplicar utilitzant la inferencia de tipos (variables residuals)
 % Enganchar el input al nodo que defineix la funci贸 que es crida i no de al return
 % summaries
-% utilitzar la info del graph matching per confirmar que fan matching (stong i weak)
-	
-	
-%POZI1						
+% utilitzar la info del graph matching per confirmar que fan matching (stong i weak)						
 											
-
 %PROBLEMA: No s'estan afegint les variables que es declaren en arguments
 
 -module(slicErlang).
