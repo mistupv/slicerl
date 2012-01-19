@@ -5,3 +5,4 @@
 \.metadata/
 Servers/
 target/
+*.beam
