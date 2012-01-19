@@ -8,10 +8,7 @@
 % Millorar la precisio al obtenir les posibles funcions a aplicar utilitzant la inferencia de tipos (variables residuals)
 % Enganchar el input al nodo que defineix la funci贸 que es crida i no de al return
 % summaries
-% utilitzar la info del graph matching per confirmar que fan matching (stong i weak)
-	
-	
-%POZI1						
+% utilitzar la info del graph matching per confirmar que fan matching (stong i weak)						
 											
 
 %PROBLEMA: No s'estan afegint les variables que es declaren en arguments
