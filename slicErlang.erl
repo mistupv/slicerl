@@ -1,7 +1,6 @@
 %c(slicErlang),c(slicErlangDot),slicErlang:start(0),slicErlangDot:start(0).
 						%c(slicErlang),c(slicErlangDot),c(slicErlangSlice),slicErlang:start(0),slicErlangDot:start(0),slicErlangSlice:start(0).
-						%assadsa
-						
+						%assadsa						
 						
 %TODO:
 % Suport a les list comprehension desde la transformacio per als tipos esta per tractar
