@@ -66,6 +66,7 @@ dotNodeInfo(Type, _Id) ->
 		{term,Term} -> "(term)  "++addNewLine(Term)++replace(lists:flatten(erl_pp:expr(Term)));
 		{pm,_,_} -> "pm";
 		{op,Op,_,_,_} -> "(op) " ++ atom_to_list(Op);
+		{body,_} -> "body";
 		_ -> io:format("peta: ~p~n",[Type]),"potosi"
 	end,
 	{NodeId,DotType}.
@@ -123,7 +124,7 @@ dotEdgesType(Type) ->
 		input -> "[color=green3, penwidth=3,constraint=false, style=\"dashed\"];";
 		output -> "[color=green3, penwidth=6,constraint=false, style=\"dashed\"];";
 		summary -> "[color=brown, penwidth=7, constraint=false];";
-		summary_data -> "[color=brown, penwidth=4, constraint=false];";
+		summary_data -> "[color=brown, penwidth=2, constraint=false];";
 		%structural -> "[color=blue, penwidth=3, style=\"dashed\"];"
 		_->""
 	end.

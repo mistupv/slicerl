@@ -13,18 +13,40 @@
 %
 main() ->%X= {1,2},
           %{Y,Z} = X,
-          I = 1,
-          Y=I,
-          case Y of
+          %I = 1,
+          %Y=I,
+          %case Y of
           	%1 -> A=1;
-          	1 -> A=0;
+          	%1 -> A=0;
           	%_ -> A=0
-          	_ -> A=1
-          end,
+          	%_ -> A=1
+          %end,
           %A.
-          add(A,A).
+          %A=1,
+          %add(A,A).
           %{Result,_}=while(Sum, I,11 ),
           %Result.
+          X={1,2},
+          g(X).
+ 	  %case X of
+	%	{1,1}    -> 1;
+	%	{2,2}    -> 2;
+	%	{Z,1}    -> 3;
+	%	_        -> 4
+	%  end,
+	  %Y={1,2},
+	  %if
+	%	Y=={1,1}    -> 1;
+	%	Y=={2,2}    -> 2;
+	%	Y=={Y,1}    -> 3;
+	%	true        -> 4
+	%  end.
+
+g({1,1})    -> 1;
+g({2,2})    -> 2;
+g({Z,W})    -> 3;
+g(_)        -> 4.
+
 
 %while(Sum, I,Top) ->
 %     if I==Top -> {Sum,Top};
@@ -37,11 +59,10 @@ main() ->%X= {1,2},
 %a(X,Y)-> X,Y.
 %{add(X,Y),(fun (Z)->add(Z,1) end)(Y)}.
 
-add(A,0)->A;
-add(A,B) -> A.%+a(A,B).
+%add(A,0)->A;
+%add(A,B) -> A.%+a(A,B).
 %
 %t({0,0})->0.
-
 
 
 %Problema --> En les noves crides a graphMatchging no podem pasarli els nodes del patternMatching original asoles. Hi hauria que pasarli els nodes als que s'esta fent PM (tercer camp)???? 
