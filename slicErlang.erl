@@ -184,7 +184,7 @@ edgesLinkClauses([N_body],Patterns,[{N_in,PatternsAcum}|ClausesAcum],Dict,NodesA
 	{Res,_,_}=graphMatchingListAll_(Patterns,PatternsAcum,Dict,NodesAcum),
 	%io:format("res: ~w~n",[Res]),
 	case Res of
-		true -> [{edge,N_body,N_in,data}]++edgesLinkClauses([N_body],Patterns,ClausesAcum,Dict,NodesAcum);
+		true -> [{edge,N_in,N_body,data}]++edgesLinkClauses([N_body],Patterns,ClausesAcum,Dict,NodesAcum);
 		_ -> edgesLinkClauses([N_body],Patterns,ClausesAcum,Dict,NodesAcum)
 	end.
 
