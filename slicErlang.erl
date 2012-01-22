@@ -146,8 +146,8 @@ graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,
     	N_in = {node,Free0,{clause_in,FL2,L2}},
     	%io:format("~n Call: ~w~n ",[{getNumNodes(N_body),getNumNodes(N1),ClausesAcum}]),
     	case From of
-    		func -> EdgesLinkClauses=edgesLinkClauses(getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD4,NodesAcumNNN);
-    		exp_case -> EdgesLinkClauses=edgesLinkClauses(getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD4,NodesAcumNNN);
+    		func -> EdgesLinkClauses=edgesLinkClauses(getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD3,NodesAcumNNNN++[N_in]);
+    		exp_case -> EdgesLinkClauses=edgesLinkClauses(getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD3,NodesAcumNNNN++[N_in]);
     		exp_if -> EdgesLinkClauses=edgesClausesAll(getNumNodes(N_body),getNumNodes(N1),ClausesAcum)
     	end,
     	%io:format("~n Return: ~w~n~n ",[{EdgesLinkClauses}]),
@@ -167,7 +167,7 @@ graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,
       		L2++L3,
       		FL2++FL3,
       		F1++FC3,
-      		NodesAcumNNNN++[N_in],
+      		NodesAcumNNNN++[N_in]++[N_body],
       		%[{Free0,getNumNodes(N1)}]++ClausesAcumN
       		ClausesAcumN
     	}.
@@ -689,7 +689,7 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 
 
 graphMatching(NP,NE,Dict,NodesAcum)->
-	%io:format("~ngraphMatching: ~w~n ~w~n ~w~n",[NP,NE,Dict]),
+	io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,Dict,NodesAcum]),
 	[{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
 	[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
 	case {TypeNP,TypeNE} of
