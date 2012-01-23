@@ -390,7 +390,11 @@ graphExpression({match,_,P0,E0},Free,VarsDict,PatExp,NodesAcum)->
     	{NodesE,EdgesE,NNFree,NNVarsDict,FirstsE,LastE,NodesAcumNN}=graphExpression(E0,NFree,NVarsDict,PatExp,NodesAcumN),
     	N_match = {node,Free,{pm,[NFree],LastE}},
 	NodesAcumNNN = NodesAcumNN++[N_match],
-    	{_,EdgesPM,NNNVarsDict}=graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN),
+    	{Res,EdgesPMAux,NNNVarsDict}=graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN),
+    	case Res of
+	    	true -> EdgesPM=EdgesPMAux;
+	    	_ ->EdgesPM=[]
+    	end,
     	{
       		[N_match]++NodesP++NodesE,
       		EdgesP++EdgesE++EdgesPM++[{edge,Free,First,control}||First <- (FirstsP++FirstsE)],
@@ -689,7 +693,7 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 
 
 graphMatching(NP,NE,Dict,NodesAcum)->
-	io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,Dict,NodesAcum]),
+	%io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,Dict,NodesAcum]),
 	[{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
 	[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
 	case {TypeNP,TypeNE} of
@@ -718,7 +722,7 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	        	case TermP of
 	             		{var,_,V}-> 	case V of
 	                       		 		'_' -> {true,[],Dict};
-	                       		  		_ ->  {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
+	                       		  		_ -> {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
 	                       		  			  Dict++[{V,[NP],[NE]}]}
                  			 	end;
 	             		_ -> 	case TypeNE of
@@ -733,18 +737,17 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	      	{_,{term,TermE}} -> 
 	       		case TermE of
 	             		{var,_,V} -> 
-	             			%io:format("FindPMVar: ~w~n",[findPMVar(V,Dict)]),
 	                        	{NodesPM,NodesDecl}=findPMVar(V,Dict),
 	                        	{Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum),
 	                        	{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]++
 	                        		[{edge,NE,NP,summary_data}]++[{edge,NE,NP,data}]++changeSD(Edges),DictTemp};
 
-	             _ -> case TypeNP of
-	                       {op,'{}',_,_,_} -> {false,[],Dict};
-	                       {op,'[]',_,_,_} -> {false,[],Dict};
-	                       _ -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum)
-	                  end
-	          end;
+	             		_ -> case TypeNP of
+	                       		{op,'{}',_,_,_} -> {false,[],Dict};
+	                       		{op,'[]',_,_,_} -> {false,[],Dict};
+	                       		_ -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum)
+	                  	     end
+	          	end;
 	        _ -> 
 	          case TypeNP of
 	               {op,'{}',_,_,_} -> 
@@ -776,7 +779,11 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	end.
 
 
+
+
 changeSD(Edges)->[{edge,S,T,summary_data}||{edge,S,T,data}<-Edges].
+
+
 
 findPMVar(V,Dict)-> 	case [{NodePM,NodeDecl} || {Var,NodeDecl,NodePM} <-Dict,Var==V] of
 				[Head|_] -> Head;
