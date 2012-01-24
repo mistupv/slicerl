@@ -38,9 +38,9 @@ buildArgs(0)->[];
 buildArgs(Id)->[{var,0,list_to_atom("VAR"++integer_to_list(Id))}]++buildArgs(Id-1).
 
 buildCaseClauses([],_,_,_)->[];
-buildCaseClauses([{clause,_,_,Guards,_}],Name,Id,Args)->
-	[{clause,0,[{var,0,'_'}],Guards,
-	   [{call,0,{atom,0,list_to_atom(atom_to_list(Name)++"_"++integer_to_list(Id)++"_CLAUSE")},Args}]}];
+%buildCaseClauses([{clause,_,_,Guards,_}],Name,Id,Args)->
+%	[{clause,0,[{var,0,'_'}],Guards,
+%	   [{call,0,{atom,0,list_to_atom(atom_to_list(Name)++"_"++integer_to_list(Id)++"_CLAUSE")},Args}]}];
 buildCaseClauses([{clause,_,Patterns,Guards,_}|Clauses],Name,Id,Args)->
 	[{clause,0,[{tuple,0,Patterns}],Guards,
 	    [{call,0,{atom,0,list_to_atom(atom_to_list(Name)++"_"++integer_to_list(Id)++"_CLAUSE")},Args}]}]
@@ -112,7 +112,10 @@ changeCalls({call,Line,F0,As0},Id,IdAF) ->
     F2=changeVarsExpression(F1,VarsDict),
     {
        {call,Line,{atom,0,FunName},As1++buildVarsAF(NeededVars)},
-       Funs1++Funs2++[{function,0,FunName,length(As0),[{clause,0,Args,[],[{call,0,F2,ArgsCall}]}]}],
+       Funs1++Funs2++[{function,0,FunName,length(As0),
+         [{clause,0,Args,[],[{'case',Line,{tuple,0,Args},
+                              [{clause,0,[{tuple,0,Args}],[],[{call,0,F2,ArgsCall}]},
+                               {clause,0,[{var,0,'_'}],[],[{atom,0,'error'}]}]}]}]}],
        Id2,IdAF2
     };
 changeCalls({match,Line,P0,E0},Id,IdAF) ->

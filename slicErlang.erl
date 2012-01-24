@@ -69,9 +69,9 @@ start(_) ->
     	%buildOutputEdges(Nodes,Edges,Free,InfoPending),
     	ReachablePatterns = getReachablePatterns(Nodes,Edges,ClausesInfoWithTypes),
     	%io:format("ReachablePatterns: ~p ~n",[{ReachablePatterns}]),
-    	%SummaryEdges = buildSummaryEdges(Edges++InputOutputEdges,ReachablePatterns,CallsInfo),
+    	SummaryEdges = buildSummaryEdges(Edges++InputOutputEdges,ReachablePatterns,CallsInfo),
     
-   	NEdges = Edges++InputOutputEdges,%++SummaryEdges,
+   	NEdges = Edges++InputOutputEdges++SummaryEdges,
     	%NEdges = Edges ++ InputOutputEdges,
     
     	{ok, DeviceSerial} = file:open("temp.serial", [write]),
@@ -956,7 +956,7 @@ inputOutputEdges(Nodes,Edges,CallInfo,[{FIn,CalledNodes,ClausesFunction}|Clauses
 
 
 %-spec inputOutputEdgesFunction([node_()],{integer(),[expression()],[integer()],integer()},[{integer(),[pattern()],[integer()],guard(),integer()}])->	[edge()].
-inputOutputEdgesFunction(_,_,_,_,[]) -> [];
+inputOutputEdgesFunction(_,_,_,_,[]) -> {[],[]};
 inputOutputEdgesFunction(Nodes,Edges,InfoCall={NCall,NodesArgs,NodeReturn,{_,TArgsCall,_}},CalledNodes,
                           	[{NodeClauseIn,NodesPatterns,Guard,Lasts,{_,TArgsClause}}|ClausesInfo])->
 	Strong_ = allArgsHold(fun erl_types:t_is_subtype/2,TArgsCall,TArgsClause),
