@@ -6,3 +6,4 @@
 Servers/
 target/
 *.beam
+.dump

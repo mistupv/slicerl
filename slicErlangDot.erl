@@ -101,6 +101,7 @@ dotEdges([],_)->"";
 dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary})->
 	%io:format("~p~n",[{edge,S,T,Type}]),
    	%"\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es).
+   	ShowSummaryData=true,
    	case Type of
     		data when (not ShowData)-> dotEdges(Es,Shows);
     	 	_-> case Type of
@@ -109,7 +110,10 @@ dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary})
     	 	      			output when (not ShowOutput)-> dotEdges(Es,Shows);
     	 	      	        	_-> case Type of 
     	 	      	                	summary when (not ShowSummary)-> dotEdges(Es,Shows); 
-    	 	      	                 	_ -> "\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es,Shows)
+    	 	      	                 	_ -> case Type of
+    	 	      	                 		summary_data when (not ShowSummaryData) -> dotEdges(Es,Shows);
+    	 	      	                 		_ -> "\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es,Shows)
+    	 	      	                 	     end	
     	 	      	             	    end
     	 	      	    end
     	 	 end
