@@ -216,6 +216,7 @@ edgesClausesAll([N_body],Patterns,[{N_in,PatternsAcum}|ClausesAcum]) ->
 %                                            ++[{edge,St1#st.free,NE,control}||NE<-St3#st.firsts])}).
 
 graphGuards(Guards,Free,VarsDict,NodesAcum) -> 
+	io:format("Entra Guard ~p~n",[{Guards,Free,VarsDict}]),
     	Vars = removeDuplicates(lists:flatten([Var||Guard <- Guards,Var<-lists:map(fun varsExpression/1,Guard)])),
     	N_guard = {node,Free,{guards,Guards}},
     	{
@@ -260,17 +261,17 @@ graphTerm(Term,Free,VarsDict,NodesAcum)->
 %%%%%%%%%%%%%%%%%%%%%%%%% graphExpression %%%%%%%%%%%%%%%%%%%%%%%%%
 graphExpression(Term={var,_,V},Free,VarsDict,pat,NodesAcum)->
 	{Ns,_,NFree,_,First,Lasts,NodesAcumN}=graphTerm(Term,Free,VarsDict,NodesAcum),
-	%io:format("Edge: ~w~n",[{Ns,NFree,First,Lasts,NodesAcumN}]),
+	%io:format("Edge1: ~w~n",[{Ns,NFree,First,Lasts,NodesAcumN}]),
 	{Ns,[],NFree,VarsDict,%++[{V,[Free],[Free]}],
 	First,Lasts,NodesAcumN};
 graphExpression(Term={var,_,V},Free,VarsDict,patArg,NodesAcum)->
 	{Ns,_,NFree,_,First,Lasts,NodesAcumN}=graphTerm(Term,Free,VarsDict,NodesAcum),
-	%io:format("Edge: ~w~n",[{Ns,NFree,First,Lasts,NodesAcumN}]),
+	%io:format("Edge2: ~w~n",[{Ns,NFree,First,Lasts,NodesAcumN}]),
 	{Ns,[],NFree,VarsDict++[{V,[Free],[Free]}],
 	First,Lasts,NodesAcumN};
 graphExpression(Term={var,_,V},Free,VarsDict,exp,NodesAcum)->
 	{Ns,_,NFree,_,First,Lasts,NodesAcumN}=graphTerm(Term,Free,VarsDict,NodesAcum),
-	%io:format("Edge: ~w~n",[[{edge,NodeDecl,Free,data}||{VarD,[NodeDecl|_],_} <- VarsDict,V==VarD]]),
+	%io:format("Edge3: ~w~n",[[{edge,NodeDecl,Free,data}||{VarD,[NodeDecl|_],_} <- VarsDict,V==VarD]]),
 	%io:format("Dict: ~w~n",[VarsDict]),
 	{Ns,
 	 [{edge,NodeDecl,Free,data}||{VarD,[NodeDecl|_],_} <- VarsDict,V==VarD],
@@ -428,9 +429,81 @@ graphExpression(Term={op,_,Op,A0,A1},Free,VarsDict,exp,NodesAcum)->
       		[Free],
       		Lasts++Lasts1,
       		NodesAcumNN++[N_op]
-    	}.
+    	};
+graphExpression(Term={lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
+    N_lc = {node,Free,{lc,{lc,LINE,E,GensFilt}}},
+    %{_,_,_,_,FirstsExpLC,_,_} = graphExpression(E,Free+1, VarsDict,PatExp,NodesAcum),
+        %io:format("mok~p~n",[NFree]),
+    {NodesGensFilt,EdgesGensFilt,NFree,NVarsDict,FirstGensFilt,LastsGensFilt,NodesAcumN} = graphGensFilt(GensFilt,Free+1,VarsDict,PatExp,NodesAcum),
+    {NodesExpLC,EdgesExpLC,NNFree,NNVarsDict,FirstsExpLC,LastsExpLC,NodesAcumNN} = graphExpression(E,NFree,NVarsDict,PatExp,NodesAcumN),
+    %io:format("lasts LC: ~p~n",[LastsGensFilt]),
+    {
+          [N_lc]++
+	  	NodesGensFilt ++
+	  	NodesExpLC,
+      	  EdgesGensFilt ++
+	  	[{edge,Free,First,control}||First <- FirstGensFilt] ++ %del lc als first dels gens
+	  	EdgesExpLC ++
+	  	[{edge,Last,First,control}||First <- FirstsExpLC , Last <-LastsGensFilt], %del ultim del generador al first de la expresió
+      NNFree,
+      NVarsDict,
+      [Free],
+      FirstsExpLC,
+      NodesAcumNN++[N_lc]
+    }.
 
 
+graphGensFilt([],Free,VarsDict,_,NodesAcum)-> {[],[],Free,VarsDict,[],[],NodesAcum};
+graphGensFilt([{generate,LINE,Pattern,Exp}|GensFilt],Free,VarsDict,PatExp,NodesAcum)-> 
+    %N_gen = {node,Free,{gen,{gen,LINE,Pattern,Exp}}},
+    {NodesExp,EdgesExp,NFree,NVarsDict,FirstsExp,LastsExp,NodesAcumN}=graphExpression(Exp,Free,VarsDict,PatExp,NodesAcum),
+    {NodesPattern,EdgesPattern,NNFree,NNVarsDict,FirstPattern,NodesAcumNN}=graphPatternsLC([Pattern],NFree,NVarsDict,PatExp,NodesAcumN),
+    {NodesGensFilt,EdgesGenFilt,NNNFree,NNNVarsDict,FirstsGenFilt,LastsGenFilt,NodesAcumNNN}=graphGensFilt(GensFilt,NNFree,NNVarsDict,PatExp,NodesAcumNN),
+    {
+      %[N_gen]++
+      NodesExp++NodesPattern++NodesGensFilt,
+      EdgesExp ++
+	  EdgesPattern ++
+	  %[{edge,Free,First,control}||First <- FirstsExp] ++
+	  [{edge,LastExp,First,control}||LastExp<- LastsExp,First <- FirstPattern] ++
+	  EdgesGenFilt,
+      NNNFree,
+      NNNVarsDict,
+      [Free]++FirstsGenFilt,
+      %[NP||{node,NP,_} <- NodesPattern]++
+      LastsGenFilt,
+      NodesAcumNNN%++[N_gen]
+    };
+graphGensFilt([Exp|GensFilt],Free,VarsDict,PatExp,NodesAcum)-> 
+    %io:format("Guard: ~p~n",[NodesExp]),
+    {NodesGuard,EdgesGuard,NFree,NodesAcumN}=graphGuards([[Exp]],Free,VarsDict,NodesAcum),
+    {NodesGensFilt,EdgesGenFilt,NNFree,NNVarsDict,FirstsGenFilt,LastsGenFilt,NodesAcumNN}=graphGensFilt(GensFilt,NFree,VarsDict,PatExp,NodesAcumN),
+    {
+      NodesGuard++NodesGensFilt,
+      %[{edge,Free,NFree,control}]++
+      	%[{edge,NFree-1,NodeExp,control}||NodeExp<-NodesExp]++
+      	EdgesGuard
+      	++EdgesGenFilt,
+      NNFree,
+      NNVarsDict,
+      [Free]++FirstsGenFilt,
+      [Free]++LastsGenFilt,
+      NodesAcumNN
+    }.
+
+
+graphPatternsLC([],Free,VarsDict,PatExp,NodesAcum) -> {[],[],Free,VarsDict,NodesAcum};
+graphPatternsLC([Pattern],Free,VarsDict,PatExp,NodesAcum) -> 
+    %io:format("pattern ~p~n",[Pattern]),
+    {N1,E1,Free1,VD1,F1,_,_,NodesAcumN} = graphExpressions([Pattern],Free,VarsDict,PatExp,NodesAcum),
+    {
+      N1,
+      removeDuplicates([{edge,Node,Free,data}||Var <- varsExpression(Pattern),{Var1,Nodes} <- VarsDict,Var1==Var,Node<-Nodes]++E1),
+      Free1,
+      VD1++[{Var,[Free],[Free]}||Var <- varsExpression(Pattern),[Var1||{Var1,_}<-VD1,Var1==Var]==[]],
+      F1,
+      NodesAcum
+    }.
 
 %graphExpression(Term={var,_,_}, St, pat) ->
 %	graphTerm(Term,St);

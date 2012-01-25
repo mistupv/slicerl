@@ -127,7 +127,15 @@ changeCalls({op,Line,Op,A0},Id,IdAF) ->
 changeCalls({op,Line,Op,L0,R0},Id,IdAF) ->
     {L1,Funs1,Id1,IdAF1} = changeCalls(L0,Id,IdAF),
     {R1,Funs2,Id2,IdAF2} = changeCalls(R0,Id1,IdAF1),				%They see the same variables
-    {{op,Line,Op,L1,R1},Funs1++Funs2,Id2,IdAF2}.
+    {{op,Line,Op,L1,R1},Funs1++Funs2,Id2,IdAF2};
+changeCalls({lc,Line,E0,G0},Id,IdAF) ->
+    {E1,Funs1,Id1,IdAF1} = changeCalls(E0,Id,IdAF),
+    {G1,Funs2,Id2,IdAF2} = changeCallsList(G0,Id1,IdAF1),
+    {{lc,Line,E1,G1},Funs1++Funs2,Id2,IdAF2};
+changeCalls({generate,Line,P0,E0},Id,IdAF) ->
+    {P1,Funs1,Id1,IdAF1} = changeCalls(P0,Id,IdAF),
+    {E1,Funs2,Id2,IdAF2} = changeCalls(E0,Id1,IdAF1),				
+    {{generate,Line,P1,E1},Funs1++Funs2,Id2,IdAF2}.
 	  
 changeCallsList([],Id,IdAF)->{[],[],Id,IdAF};
 changeCallsList([E|Es],Id,IdAF)->
