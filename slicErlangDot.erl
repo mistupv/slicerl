@@ -102,20 +102,12 @@ dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary,S
 	%io:format("~p~n",[{edge,S,T,Type}]),
    	%"\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es).
    	case Type of
-    		data when (not ShowData)-> dotEdges(Es,Shows);
-    	 	_-> case Type of
-    	 	    	input when (not ShowInput)-> dotEdges(Es,Shows);
-    	 	      	_ -> case Type of
-    	 	      			output when (not ShowOutput)-> dotEdges(Es,Shows);
-    	 	      	        	_-> case Type of 
-    	 	      	                	summary when (not ShowSummary)-> dotEdges(Es,Shows); 
-    	 	      	                 	_ -> case Type of
-    	 	      	                 		summary_data when (not ShowSummaryData) -> dotEdges(Es,Shows);
-    	 	      	                 		_ -> "\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es,Shows)
-    	 	      	                 	     end	
-    	 	      	             	    end
-    	 	      	    end
-    	 	 end
+             data when (not ShowData)-> dotEdges(Es,Shows);
+    	     input when (not ShowInput)-> dotEdges(Es,Shows);
+    	     output when (not ShowOutput)-> dotEdges(Es,Shows);
+    	     summary when (not ShowSummary)-> dotEdges(Es,Shows); 
+    	     summary_data when (not ShowSummaryData) -> dotEdges(Es,Shows);
+    	     _ -> "\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es,Shows)
     	end.
 	
 
@@ -127,7 +119,7 @@ dotEdgesType(Type) ->
 		input -> "[color=green3, penwidth=3,constraint=false, style=\"dashed\"];";
 		output -> "[color=green3, penwidth=6,constraint=false, style=\"dashed\"];";
 		summary -> "[color=brown, penwidth=7, constraint=false];";
-		summary_data -> "[color=brown, penwidth=2, constraint=false];";
+		summary_data -> "[color=red, penwidth=3, constraint=false , style=\"dotted\"];";
 		%structural -> "[color=blue, penwidth=3, style=\"dashed\"];"
 		_->""
 	end.
