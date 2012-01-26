@@ -13,7 +13,7 @@ start(_) ->
 	{value,{Nodes,Edges},_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
     	{ok, Device} = file:open("shows.txt", [read]),
     	Shows={list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
-              list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
+              list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
     	ok=file:close(Device),
     	dotGraph(Nodes,Edges,"temp.dot",Shows).
     
@@ -98,10 +98,9 @@ dotNodeType(Type,Id,Slice)->
 
 
 dotEdges([],_)->"";
-dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary})->
+dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary,ShowSummaryData})->
 	%io:format("~p~n",[{edge,S,T,Type}]),
    	%"\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es).
-   	ShowSummaryData=true,
    	case Type of
     		data when (not ShowData)-> dotEdges(Es,Shows);
     	 	_-> case Type of
