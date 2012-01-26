@@ -133,9 +133,9 @@ changeCalls({lc,Line,E0,G0},Id,IdAF) ->
     {G1,Funs2,Id2,IdAF2} = changeCallsList(G0,Id1,IdAF1),
     {{lc,Line,E1,G1},Funs1++Funs2,Id2,IdAF2};
 changeCalls({generate,Line,P0,E0},Id,IdAF) ->
-    {P1,Funs1,Id1,IdAF1} = changeCalls(P0,Id,IdAF),
-    {E1,Funs2,Id2,IdAF2} = changeCalls(E0,Id1,IdAF1),				
-    {{generate,Line,P1,E1},Funs1++Funs2,Id2,IdAF2}.
+    %{P1,Funs1,Id1,IdAF1} = changeCalls(P0,Id,IdAF),
+    {E1,Funs1,Id1,IdAF1} = changeCalls(E0,Id,IdAF),				
+    {{generate,Line,P0,E1},Funs1,Id1,IdAF1}.
 	  
 changeCallsList([],Id,IdAF)->{[],[],Id,IdAF};
 changeCallsList([E|Es],Id,IdAF)->
@@ -172,6 +172,8 @@ varsExpression({'fun',_,Body})->
 	      []
      end;
 varsExpression({call,_,F,As})-> removeDuplicates(varsExpression(F)++[Var||E<-As,Var<-varsExpression(E)]);
+varsExpression({lc,_,Ex,Gs})-> removeDuplicates(varsExpression(Ex)++[Var||E<-Gs,Var<-varsExpression(E)]);
+varsExpression({generate,_,_,E})-> varsExpression(E);
 varsExpression(_)-> [].
 
 %Falta anyadir les variables de les clausules
@@ -214,6 +216,10 @@ changeVarsExpression({'fun',LINE,Body},VarsDict)->
   end;
 changeVarsExpression({call,LINE,F,As},VarsDict)->
   {call,LINE,changeVarsExpression(F,VarsDict),lists:map(fun (E)-> changeVarsExpression(E,VarsDict) end,As)}; 
+changeVarsExpression({lc,LINE,E,G},VarsDict)->
+  {lc,LINE,changeVarsExpression(E,VarsDict),lists:map(fun (E)-> changeVarsExpression(G,VarsDict) end,As)};
+changeVarsExpression({generate,LINE,P,E},VarsDict)->
+  {generate,LINE,P,changeVarsExpression(E,VarsDict)};  
 changeVarsExpression(E,_)->E.   
     
 changeVarsClause({clause,LINE,Patterns,Guards,Body},VarsDict)->

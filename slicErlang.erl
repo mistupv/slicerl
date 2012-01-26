@@ -216,7 +216,7 @@ edgesClausesAll([N_body],Patterns,[{N_in,PatternsAcum}|ClausesAcum]) ->
 %                                            ++[{edge,St1#st.free,NE,control}||NE<-St3#st.firsts])}).
 
 graphGuards(Guards,Free,VarsDict,NodesAcum) -> 
-	io:format("Entra Guard ~p~n",[{Guards,Free,VarsDict}]),
+	%io:format("Entra Guard ~p~n",[{Guards,Free,VarsDict}]),
     	Vars = removeDuplicates(lists:flatten([Var||Guard <- Guards,Var<-lists:map(fun varsExpression/1,Guard)])),
     	N_guard = {node,Free,{guards,Guards}},
     	{
@@ -432,11 +432,8 @@ graphExpression(Term={op,_,Op,A0,A1},Free,VarsDict,exp,NodesAcum)->
     	};
 graphExpression(Term={lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
     N_lc = {node,Free,{lc,{lc,LINE,E,GensFilt}}},
-    %{_,_,_,_,FirstsExpLC,_,_} = graphExpression(E,Free+1, VarsDict,PatExp,NodesAcum),
-        %io:format("mok~p~n",[NFree]),
     {NodesGensFilt,EdgesGensFilt,NFree,NVarsDict,FirstGensFilt,LastsGensFilt,NodesAcumN} = graphGensFilt(GensFilt,Free+1,VarsDict,PatExp,NodesAcum),
     {NodesExpLC,EdgesExpLC,NNFree,NNVarsDict,FirstsExpLC,LastsExpLC,NodesAcumNN} = graphExpression(E,NFree,NVarsDict,PatExp,NodesAcumN),
-    %io:format("lasts LC: ~p~n",[LastsGensFilt]),
     {
           [N_lc]++
 	  	NodesGensFilt ++
@@ -455,33 +452,26 @@ graphExpression(Term={lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
 
 graphGensFilt([],Free,VarsDict,_,NodesAcum)-> {[],[],Free,VarsDict,[],[],NodesAcum};
 graphGensFilt([{generate,LINE,Pattern,Exp}|GensFilt],Free,VarsDict,PatExp,NodesAcum)-> 
-    %N_gen = {node,Free,{gen,{gen,LINE,Pattern,Exp}}},
     {NodesExp,EdgesExp,NFree,NVarsDict,FirstsExp,LastsExp,NodesAcumN}=graphExpression(Exp,Free,VarsDict,PatExp,NodesAcum),
     {NodesPattern,EdgesPattern,NNFree,NNVarsDict,FirstPattern,NodesAcumNN}=graphPatternsLC([Pattern],NFree,NVarsDict,PatExp,NodesAcumN),
     {NodesGensFilt,EdgesGenFilt,NNNFree,NNNVarsDict,FirstsGenFilt,LastsGenFilt,NodesAcumNNN}=graphGensFilt(GensFilt,NNFree,NNVarsDict,PatExp,NodesAcumNN),
     {
-      %[N_gen]++
       NodesExp++NodesPattern++NodesGensFilt,
       EdgesExp ++
 	  EdgesPattern ++
-	  %[{edge,Free,First,control}||First <- FirstsExp] ++
 	  [{edge,LastExp,First,control}||LastExp<- LastsExp,First <- FirstPattern] ++
 	  EdgesGenFilt,
       NNNFree,
       NNNVarsDict,
       [Free]++FirstsGenFilt,
-      %[NP||{node,NP,_} <- NodesPattern]++
       LastsGenFilt,
-      NodesAcumNNN%++[N_gen]
+      NodesAcumNNN
     };
 graphGensFilt([Exp|GensFilt],Free,VarsDict,PatExp,NodesAcum)-> 
-    %io:format("Guard: ~p~n",[NodesExp]),
     {NodesGuard,EdgesGuard,NFree,NodesAcumN}=graphGuards([[Exp]],Free,VarsDict,NodesAcum),
     {NodesGensFilt,EdgesGenFilt,NNFree,NNVarsDict,FirstsGenFilt,LastsGenFilt,NodesAcumNN}=graphGensFilt(GensFilt,NFree,VarsDict,PatExp,NodesAcumN),
     {
       NodesGuard++NodesGensFilt,
-      %[{edge,Free,NFree,control}]++
-      	%[{edge,NFree-1,NodeExp,control}||NodeExp<-NodesExp]++
       	EdgesGuard
       	++EdgesGenFilt,
       NNFree,
@@ -491,16 +481,14 @@ graphGensFilt([Exp|GensFilt],Free,VarsDict,PatExp,NodesAcum)->
       NodesAcumNN
     }.
 
-
 graphPatternsLC([],Free,VarsDict,PatExp,NodesAcum) -> {[],[],Free,VarsDict,NodesAcum};
 graphPatternsLC([Pattern],Free,VarsDict,PatExp,NodesAcum) -> 
-    %io:format("pattern ~p~n",[Pattern]),
     {N1,E1,Free1,VD1,F1,_,_,NodesAcumN} = graphExpressions([Pattern],Free,VarsDict,PatExp,NodesAcum),
     {
       N1,
       removeDuplicates([{edge,Node,Free,data}||Var <- varsExpression(Pattern),{Var1,Nodes} <- VarsDict,Var1==Var,Node<-Nodes]++E1),
       Free1,
-      VD1++[{Var,[Free],[Free]}||Var <- varsExpression(Pattern),[Var1||{Var1,_}<-VD1,Var1==Var]==[]],
+      VD1++[{Var,[Free],[Free]}||Var <- varsExpression(Pattern),[Var1||{Var1,_,_}<-VD1,Var1==Var]==[]],
       F1,
       NodesAcum
     }.
@@ -795,7 +783,8 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	        	case TermP of
 	             		{var,_,V}-> 	case V of
 	                       		 		'_' -> {true,[],Dict};
-	                       		  		_ -> {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
+	                       		  		%_ -> {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
+	                       		  		_ -> {true,[{edge,Last,NP,data}||Last <- lasts(TypeNE)],
 	                       		  			  Dict++[{V,[NP],[NE]}]}
                  			 	end;
 	             		_ -> 	case TypeNE of
@@ -900,11 +889,13 @@ graphMatchingListAllIO([NP|NPs],[NE|NEs],Dict,NodesAcum)->
     	%io:format("GMLA: ~w~n",[{NP,NE,Dict}]),
 	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
 	%io:format("GMLA Results: ~w~n",[{Bool1,DataArcs1,Dict2}]),
-	case Bool1 of 
-		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAll(NPs,NEs,Dict,NodesAcum),
-	             	{Bool2,DataArcs1++DataArcs2,Dict3};
-	     	false-> {false,[],Dict}
-	end. 
+	{Bool2,DataArcs2,Dict3}=graphMatchingListAllIO(NPs,NEs,Dict,NodesAcum),
+	{Bool2,DataArcs1++DataArcs2,Dict3}.
+%	case Bool1 of 
+%		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAllIO(NPs,NEs,Dict,NodesAcum),
+%	             	{Bool2,DataArcs1++DataArcs2,Dict3};
+%	     	false-> {false,[],Dict}
+%	end. 
 	
 
 graphMatchingListAll_([],[],Dict,_) -> {true,[],Dict};	
@@ -962,8 +953,11 @@ buildInputOutputEdges(Nodes,Edges,[CallInfo={NCall,NodeCalled,NodesArgs,NodeRetu
 	                                                        {edge,NFIn_,NIn_,control}<-Edges,
 	                                                        NIn==NIn_,NFIn==NFIn_]}
 	                         || {NFIn,CalledNodes}<-NodesIn],
+	% io:format("NodeCall: ~w ~nNodesArgs: ~w ~n",[NCall,NodesArgs]),            
 	{MatchingClauses,IOEdges}=inputOutputEdges(Nodes,Edges,{NCall,NodesArgs,NodeReturn,Types},ApplicableClausesInfo),
+	%io:format("IOEdges: ~w ~n",[IOEdges]),
 	{PendingCalls,NewEdges}=buildInputOutputEdges(Nodes,Edges,CallsInfo,ClausesInfo),
+	%io:format("NewEdges: ~w ~n",[NewEdges]),
 	{[{CallInfo,MatchingClauses}|PendingCalls],IOEdges ++ NewEdges}.
 
 
@@ -1041,6 +1035,7 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={NCall,NodesArgs,NodeReturn,{_,TAr
 		Strong -> 
 	    	%NOW IS NOT CHECKING WHETHER THERE IS OR NOT A GRAPH MATCHING. IT IS SUPPOSED TO EXIST.
 	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes), 
+	    		%io:format("EdgesMatch: ~w ~n",[EdgesMatch]),
 	    		{
 	    			[NodeClauseIn],
 	    			[{edge,getParentControl(CalledNode,Edges),NodeClauseIn,input}||CalledNode<-CalledNodes]
@@ -1050,7 +1045,8 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={NCall,NodesArgs,NodeReturn,{_,TAr
 		 	};
 		Weak -> 
 	   	%NOW IS NOT CHECKING WHETHER THERE IS OR NOT A GRAPH MATCHING. IT IS SUPPOSED TO EXIST.
-	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes), 
+	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes),
+	    		%io:format("EdgesMatch: ~w ~n",[EdgesMatch]), 
 	     		{MatchingClauses,NewEdges}=inputOutputEdgesFunction(Nodes,Edges,InfoCall,CalledNodes,ClausesInfo),
 	   		{
 	   			[NodeClauseIn|MatchingClauses],
@@ -1282,6 +1278,5 @@ termEquality(_,_)->false.
 
 
 getParentControl(Node,Edges) ->
-	%io:format("~p ~n ~p ~n ",[Node,Edges]),
 	[Parent|_]=[Parent_||{edge,Parent_,Node_,control}<-Edges,Node_==Node],
 	Parent.
