@@ -173,7 +173,7 @@ edgesLinkClauses([],_,_,_,_) -> [];
 edgesLinkClauses(_,_,[],_,_) -> []; 
 edgesLinkClauses([N_body],Patterns,[{N_in,PatternsAcum}|ClausesAcum],Dict,NodesAcum) -> 
 	%io:format("~ngraphMatching: N_BODY:~w~n PATTERNS:~w~n PATTERNS_ACUM~w~n",[N_body,Patterns,PatternsAcum]),
-	{Res,_,_}=graphMatchingListAll_(Patterns,PatternsAcum,Dict,NodesAcum),
+	{Res,_,_}=graphMatchingListAllLinkClauses(Patterns,PatternsAcum,Dict,NodesAcum,false),
 	%io:format("res: ~w~n",[Res]),
 	case Res of
 		true -> [{edge,N_in,N_body,data}]++edgesLinkClauses([N_body],Patterns,ClausesAcum,Dict,NodesAcum);
@@ -336,7 +336,7 @@ graphExpression(Term={'case',_,E,Cs0},Free,VarsDict,exp,NodesAcum)->
 		graphClauses(Cs0,NFree,NVarsDict,NodesAcumN,exp_case,[]),
     	N_case = {node,Free,{'case',Term,FLasts,LastsClauses}},
     	NodesAcumNNN = NodesAcumNN++[N_case],
-    	{_,EdgesPM,NNNVarsDict}=graphMatchingListPattern(FPat,Free+1,NNVarsDict,NodesAcumNNN),
+    	{_,EdgesPM,NNNVarsDict}=graphMatchingListPattern(FPat,Free+1,NNVarsDict,NodesAcumNNN,false),
     	{
       		[N_case]++NodesE++NodesClauses,
       		EdgesE++EdgesClauses++EdgesPM
@@ -383,7 +383,7 @@ graphExpression({match,_,P0,E0},Free,VarsDict,PatExp,NodesAcum)->
     	{NodesE,EdgesE,NNFree,NNVarsDict,FirstsE,LastE,NodesAcumNN}=graphExpression(E0,NFree,NVarsDict,PatExp,NodesAcumN),
     	N_match = {node,Free,{pm,[NFree],LastE}},
 	NodesAcumNNN = NodesAcumNN++[N_match],
-    	{Res,EdgesPMAux,NNNVarsDict}=graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN),
+    	{Res,EdgesPMAux,NNNVarsDict}=graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN,false),
     	case Res of
 	    	true -> EdgesPM=EdgesPMAux;
 	    	_ ->EdgesPM=[]
@@ -752,7 +752,7 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 
 
 
-graphMatching(NP,NE,Dict,NodesAcum)->
+graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	%io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,Dict,NodesAcum]),
 	[{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
 	[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
@@ -763,14 +763,17 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	             		_ -> 	case TermP of
 	                       			{var,_,V} -> 
 	                       				case V of
-	                       					'_' -> {true,[],Dict};
+	                       					'_' -> case FromIO of
+	                       						    true -> {true,[{edge,NE,NP,data}],Dict};
+	                       						    _ -> {true,[],Dict}
+	                       						end;
 	                       					_ -> {true,[{edge,NE,NP,data}],Dict++[{V,[NP],[NE]}]}
 	                       				end;
 	                        		_ -> 	case TermE of
 	                                  			{var,_,V} -> 
 	                                  				{NodesPM,NodesDecl}=findPMVar(V,Dict),
 	                                  				{Return,Edges,DictTemp}=
-	                                  					graphMatchingList(NP,NodesPM,Dict,NodesAcum),
+	                                  					graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
 	                                  				{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
 	                                  					++[{edge,NE,NP,summary_data}]
 	                                  					++[{edge,NE,NP,data}]++changeSD(Edges),DictTemp};
@@ -781,7 +784,10 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	    	{{term,TermP},_} -> 	
 	        	case TermP of
 	             		{var,_,V}-> 	case V of
-	                       		 		'_' -> {true,[],Dict};
+	                       		 		'_' -> case FromIO of
+	                       				             true -> {true,[{edge,NE,NP,data}],Dict};
+	                       					     _ -> {true,[],Dict}
+	                       				       end;
 	                       		  		%_ -> {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
 	                       		  		_ -> {true,[{edge,Last,NP,data}||Last <- lasts(TypeNE)],
 	                       		  			  Dict++[{V,[NP],[NE]}]}
@@ -792,21 +798,21 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	                       			{function_in,_,_,_,_} -> {false,[],Dict};
 	                       			{op,_,_,_,Lasts} -> {true,[{edge,Last,NP,data}||Last <- Lasts],Dict};
 	                       			{call,Return} -> {true,[{edge,Return,NP,data}],Dict};
-	                       			_ ->  graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum)
+	                       			_ ->  graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
 	                   		end
 	         	end;
 	      	{_,{term,TermE}} -> 
 	       		case TermE of
 	             		{var,_,V} -> 
 	                        	{NodesPM,NodesDecl}=findPMVar(V,Dict),
-	                        	{Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum),
+	                        	{Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
 	                        	{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]++
 	                        		[{edge,NE,NP,summary_data}]++[{edge,NE,NP,data}]++changeSD(Edges),DictTemp};
 
 	             		_ -> case TypeNP of
 	                       		{op,'{}',_,_,_} -> {false,[],Dict};
 	                       		{op,'[]',_,_,_} -> {false,[],Dict};
-	                       		_ -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum)
+	                       		_ -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,FromIO)
 	                  	     end
 	          	end;
 	        _ -> 
@@ -817,24 +823,24 @@ graphMatching(NP,NE,Dict,NodesAcum)->
 	               		     	{function_in,_,_,_,_} -> {false,[],Dict};
 				     	{call,Return} -> {true,[{edge,Return,NP,data}],Dict};
 				     	{op,'{}',_,_,_} -> case graphMatchingListAll(firstsLasts(TypeNP),firstsLasts(TypeNE),
-				     							Dict,NodesAcum) of
+				     							Dict,NodesAcum,FromIO) of
 							   	{true,DEdges,DictTemp} -> {true,DEdges++[{edge,NE,NP,data}],DictTemp};
 							        _ -> {false,[],Dict}
 							   end;
-				     	_ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum)
+				     	_ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
 				 end;
 			{op,'[]',_,_,_} -> 
 	               		case TypeNE  of 
 	               			{function_in,_,_,_,_} -> {false,[],Dict};
 				   	{call,Return} -> {true,[{edge,Return,NP,data}],Dict};
 				     	{op,'[]',_,_,_} -> 
-				     		case graphMatchingListAll(firstsLasts(TypeNP),firstsLasts(TypeNE),Dict,NodesAcum) of
+				     		case graphMatchingListAll(firstsLasts(TypeNP),firstsLasts(TypeNE),Dict,NodesAcum,FromIO) of
 							{true,DEdges,DictTemp} -> {true,DEdges++[{edge,NE,NP,data}],DictTemp};
 							_ -> {false,[],Dict}
 						end;
-				        _ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum)
+				        _ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
 				end;
-			{pm,_,_} -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum);
+			{pm,_,_} -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,FromIO);
 			_ -> {false,[],Dict}
 		  end
 	end.
@@ -852,43 +858,43 @@ findPMVar(V,Dict)-> 	case [{NodePM,NodeDecl} || {Var,NodeDecl,NodePM} <-Dict,Var
 	            	end.
 	            
 	           
-graphMatchingList(_,[],Dict,_) -> {false,[],Dict};
-graphMatchingList(NP,[NE|NEs],Dict,NodesAcum)->	
+graphMatchingList(_,[],Dict,_,_) -> {false,[],Dict};
+graphMatchingList(NP,[NE|NEs],Dict,NodesAcum,FromIO)->	
     	%io:format("GML: ~w~n",[{NP,NE}]),
-	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
-	{Bool2,DataArcs2,Dict3}=graphMatchingList(NP,NEs,Dict2,NodesAcum),
+	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
+	{Bool2,DataArcs2,Dict3}=graphMatchingList(NP,NEs,Dict2,NodesAcum,FromIO),
 	{Bool1 or Bool2,DataArcs1++DataArcs2,Dict3}. 
 	
 	
-graphMatchingListPattern([],_,Dict,_) -> {false,[],Dict};
-graphMatchingListPattern([NP|NPs],NE,Dict,NodesAcum)->	
+graphMatchingListPattern([],_,Dict,_,_) -> {false,[],Dict};
+graphMatchingListPattern([NP|NPs],NE,Dict,NodesAcum,FromIO)->	
     	%io:format("GMLP: ~w~n",[{NP,NE}]),
-	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
-	{Bool2,DataArcs2,Dict3}=graphMatchingListPattern(NPs,NE,Dict2,NodesAcum),
+	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
+	{Bool2,DataArcs2,Dict3}=graphMatchingListPattern(NPs,NE,Dict2,NodesAcum,FromIO),
 	{Bool1 or Bool2,DataArcs1++DataArcs2,Dict3}.
 
-graphMatchingListAll([],[],Dict,_) -> {true,[],Dict};	
-graphMatchingListAll([],_,Dict,_) -> {false,[],Dict};	
-graphMatchingListAll(_,[],Dict,_) -> {false,[],Dict};
-graphMatchingListAll([NP|NPs],[NE|NEs],Dict,NodesAcum)->	
+graphMatchingListAll([],[],Dict,_,_) -> {true,[],Dict};	
+graphMatchingListAll([],_,Dict,_,_) -> {false,[],Dict};	
+graphMatchingListAll(_,[],Dict,_,_) -> {false,[],Dict};
+graphMatchingListAll([NP|NPs],[NE|NEs],Dict,NodesAcum,FromIO)->	
     	%io:format("GMLA: ~w~n",[{NP,NE}]),
-	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
+	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
 	%io:format("GMLA Results: ~w~n",[{Bool1,NPs,NEs}]),
 	case Bool1 of 
-		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAll(NPs,NEs,Dict2,NodesAcum),
+		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAll(NPs,NEs,Dict2,NodesAcum,FromIO),
 	            	{Bool2,DataArcs1++DataArcs2,Dict3};
 	     	false-> {false,[],Dict}
 	end. 
 
 
-graphMatchingListAllIO([],[],Dict,_) -> {true,[],Dict};	
-graphMatchingListAllIO([],_,Dict,_) -> {false,[],Dict};	
-graphMatchingListAllIO(_,[],Dict,_) -> {false,[],Dict};
-graphMatchingListAllIO([NP|NPs],[NE|NEs],Dict,NodesAcum)->	
+graphMatchingListAllIO([],[],Dict,_,_) -> {true,[],Dict};	
+graphMatchingListAllIO([],_,Dict,_,_) -> {false,[],Dict};	
+graphMatchingListAllIO(_,[],Dict,_,_) -> {false,[],Dict};
+graphMatchingListAllIO([NP|NPs],[NE|NEs],Dict,NodesAcum,FromIO)->	
     	%io:format("GMLA: ~w~n",[{NP,NE,Dict}]),
-	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
+	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
 	%io:format("GMLA Results: ~w~n",[{Bool1,DataArcs1,Dict2}]),
-	{Bool2,DataArcs2,Dict3}=graphMatchingListAllIO(NPs,NEs,Dict,NodesAcum),
+	{Bool2,DataArcs2,Dict3}=graphMatchingListAllIO(NPs,NEs,Dict,NodesAcum,FromIO),
 	{Bool2,DataArcs1++DataArcs2,Dict3}.
 %	case Bool1 of 
 %		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAllIO(NPs,NEs,Dict,NodesAcum),
@@ -897,15 +903,15 @@ graphMatchingListAllIO([NP|NPs],[NE|NEs],Dict,NodesAcum)->
 %	end. 
 	
 
-graphMatchingListAll_([],[],Dict,_) -> {true,[],Dict};	
-graphMatchingListAll_([],_,Dict,_) -> {true,[],Dict};	
-graphMatchingListAll_(_,[],Dict,_) -> {true,[],Dict};
-graphMatchingListAll_([NP|NPs],[NE|NEs],Dict,NodesAcum)->	
+graphMatchingListAllLinkClauses([],[],Dict,_,_) -> {true,[],Dict};	
+graphMatchingListAllLinkClauses([],_,Dict,_,_) -> {true,[],Dict};	
+graphMatchingListAllLinkClauses(_,[],Dict,_,_) -> {true,[],Dict};
+graphMatchingListAllLinkClauses([NP|NPs],[NE|NEs],Dict,NodesAcum,FromIO)->	
     	%io:format("GMLA: ~w~n",[{NP,NE}]),
-	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum),
+	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
 	%io:format("GMLA Results: ~w~n",[{Bool1,NPs,NEs}]),
 	case Bool1 of 
-		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAll_(NPs,NEs,Dict2,NodesAcum),
+		true -> {Bool2,DataArcs2,Dict3}=graphMatchingListAllLinkClauses(NPs,NEs,Dict2,NodesAcum,FromIO),
 	            	{Bool2,DataArcs1++DataArcs2,Dict3};
 	     	false-> {false,[],Dict}
 	end. 	
@@ -1033,7 +1039,7 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={NCall,NodesArgs,NodeReturn,{_,TAr
     	if
 		Strong -> 
 	    	%NOW IS NOT CHECKING WHETHER THERE IS OR NOT A GRAPH MATCHING. IT IS SUPPOSED TO EXIST.
-	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes), 
+	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,true), 
 	    		%io:format("EdgesMatch: ~w ~n",[EdgesMatch]),
 	    		{
 	    			[NodeClauseIn],
@@ -1044,7 +1050,7 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={NCall,NodesArgs,NodeReturn,{_,TAr
 		 	};
 		Weak -> 
 	   	%NOW IS NOT CHECKING WHETHER THERE IS OR NOT A GRAPH MATCHING. IT IS SUPPOSED TO EXIST.
-	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes),
+	    		{_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,true),
 	    		%io:format("EdgesMatch: ~w ~n",[EdgesMatch]), 
 	     		{MatchingClauses,NewEdges}=inputOutputEdgesFunction(Nodes,Edges,InfoCall,CalledNodes,ClausesInfo),
 	   		{
