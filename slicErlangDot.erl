@@ -119,7 +119,8 @@ dotEdgesType(Type) ->
 		input -> "[color=green3, penwidth=3,constraint=false, style=\"dashed\"];";
 		output -> "[color=green3, penwidth=6,constraint=false, style=\"dashed\"];";
 		summary -> "[color=brown, penwidth=7, constraint=false];";
-		summary_data -> "[color=red, penwidth=3, constraint=false , style=\"dotted\"];";
+		summary_data -> "[color=blue, penwidth=1, constraint=false];";
+		%, style=\"dotted\"];";
 		%structural -> "[color=blue, penwidth=3, style=\"dashed\"];"
 		_->""
 	end.

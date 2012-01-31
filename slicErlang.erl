@@ -127,20 +127,12 @@ graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,
     	{N1,E1,Free1,VD1,F1,_,_,NodesAcumN} = graphExpressions(Patterns,Free0+1,VD0,Type,NodesAcum),
        	VD2=VD1++[{Var,NodesDecl,NodesPM}||{Var,NodesDecl,NodesPM}<-VD0,[Var1||{Var1,_,_}<-VD1,Var1==Var]==[]],
     	{N2,E2,Free2,NodesAcumNN} = graphGuards(Guards,Free1,VD2,NodesAcumN),
-	case From of
-    		%Si es una funció no afegim el node body
-    		%func -> N_FreeBody=Free2;
-    		_ -> 	N_FreeBody=Free2+1
-    	end, 
-    	{N3,E3,Free3,VD3,F2,L2,FL2,NodesAcumNNN} =graphExpressionsLast(Body,N_FreeBody,VD2,exp,NodesAcumNN),
-    	 case From of
-    		%Si es una funció no afegim el node body
-    		%func -> N_body=[],EdgeBody=[],EdgesBody_Body=[{edge,Free1,NE,control}||NE<-F2];%de la guarda als first del body
-    		_ -> 	N_body=[{node,Free2,{body,Body}}],
-    			%io:format("EDGE1 : ~p~n",[{Free1,Free2}]),
-    			EdgeBody=[{edge,Free1,Free2,control}], %del node guarda al node body
-    			EdgesBody_Body=[{edge,Free2,NE,control}||NE<-F2] %del node body als first del body	
-    	end, 
+    	{N3,E3,Free3,VD3,F2,L2,FL2,NodesAcumNNN} =graphExpressionsLast(Body,Free2+1,VD2,exp,NodesAcumNN),
+    	
+	N_body=[{node,Free2,{body,Body}}],
+    	EdgeBody=[{edge,Free1,Free2,control}], %del node guarda al node body
+    	EdgesBody_Body=[{edge,Free2,NE,control}||NE<-F2],%del node body als first del body	
+    	
     	%Buscar els nodes calls asi que hi han en N3
     	{N4,E4,Free4,VD4,F3,L3,FL3,FC3,NodesAcumNNNN,ClausesAcumN} = graphClauses(Clauses,Free3,VD0,NodesAcumNNN,From,ClausesAcum++[{Free0,getNumNodes(N1)}]),
     	N_in = {node,Free0,{clause_in,FL2,L2}},
@@ -434,6 +426,13 @@ graphExpression(Term={lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
     N_lc = {node,Free,{lc,{lc,LINE,E,GensFilt}}},
     {NodesGensFilt,EdgesGensFilt,NFree,NVarsDict,FirstGensFilt,LastsGensFilt,NodesAcumN} = graphGensFilt(GensFilt,Free+1,VarsDict,PatExp,NodesAcum),
     {NodesExpLC,EdgesExpLC,NNFree,NNVarsDict,FirstsExpLC,LastsExpLC,NodesAcumNN} = graphExpression(E,NFree,NVarsDict,PatExp,NodesAcumN),
+    
+    LastsGens2ExpAux=[{edge,Last,First,control}||First <- FirstsExpLC , Last <-LastsGensFilt],
+    case LastsGens2ExpAux of
+    	[] -> LastsGens2Exp=[{edge,Free,First,control}||First <- FirstsExpLC];
+    	_ -> LastsGens2Exp=LastsGens2ExpAux
+    end,
+    
     {
           [N_lc]++
 	  	NodesGensFilt ++
@@ -441,7 +440,7 @@ graphExpression(Term={lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
       	  EdgesGensFilt ++
 	  	[{edge,Free,First,control}||First <- FirstGensFilt] ++ %del lc als first dels gens
 	  	EdgesExpLC ++
-	  	[{edge,Last,First,control}||First <- FirstsExpLC , Last <-LastsGensFilt], %del ultim del generador al first de la expresió
+	  	LastsGens2Exp, %del ultim del generador al first de la expresió
       NNFree,
       NVarsDict,
       [Free],
