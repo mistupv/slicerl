@@ -753,7 +753,7 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 
 
 graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
-	%io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,Dict,NodesAcum]),
+	io:format("~ngraphMatching: ~w~n ~w~n",[NP,NE]),
 	[{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
 	[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
 	case {TypeNP,TypeNE} of
@@ -768,7 +768,8 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                       						    _ -> {true,[],Dict}
 	                       						end;
 	                       					_ -> 	case existVarDict(V,Dict) of
-	                       							true -> EdgeUse = [{edge,NodeDecl,NP,dataAux}||{VarD,[NodeDecl|_],_} <- Dict,V==VarD],
+	                       							true -> EdgeUse = [{edge,NodeDecl,NP,data}||{VarD,[NodeDecl|_],_} <- Dict,V==VarD],
+	                       								%io:format("EdgeUse1 ~p~n",[EdgeUse]),
 	                       								DictTemp=Dict;
 	                       							_ ->    EdgeUse=[],
 	                     								DictTemp=Dict++[{V,[NP],[NE]}]
@@ -778,13 +779,15 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                        		_ -> 	case TermE of
 	                                  			{var,_,V} -> 
 	                                  				{NodesPM,NodesDecl}=findPMVar(V,Dict),
+	                                  				io:format("NodesDecl1 ~w~n",[{NodesDecl,Dict}]),
 	                                  				{Return,Edges,DictTemp}=
 	                                  					graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
+	                                  					%io:format("Edges1 ~p~n",[Edges]),
 	                                  				{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
 	                                  					%++[{edge,NE,NP,summary_data}]
 	                                  					++[{edge,NE,NP,data}]++
 	                                  					%changeEdgeTypeNotAcum(Edges,data,summary_data)++
-	                                  					changeEdgeType(Edges,dataAux,data),DictTemp};
+	                                  					changeEdgeTypeNotAcum(Edges,dataAux,data),DictTemp};
 	                                  			_ -> {false,[],Dict}
 	                             			end
 	                   		end
@@ -798,7 +801,8 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                       			       end;
 	                       		  	%_ -> {true,[{edge,Last,NP,data}||Last <- firstsLasts(TypeNE)],
 	                       		  	_ ->    case existVarDict(V,Dict) of
-	                       					true -> EdgeUse = [{edge,NodeDecl,NP,dataAux}||{VarD,[NodeDecl|_],_} <- Dict,V==VarD],
+	                       					true -> EdgeUse = [{edge,NodeDecl,NP,data}||{VarD,[NodeDecl|_],_} <- Dict,V==VarD],
+	                       						%io:format("EdgeUse2 ~p~n",[{NP,NE,EdgeUse}]),
 	                       						DictTemp=Dict;
 	                       					_ ->    EdgeUse=[],
 	                     						DictTemp=Dict++[{V,[NP],[NE]}]
@@ -818,12 +822,14 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	       		case TermE of
 	             		{var,_,V} -> 
 	                        	{NodesPM,NodesDecl}=findPMVar(V,Dict),
+	                                 io:format("NodesDecl2 ~w~n",[{NodesDecl,Dict}]),
 	                        	{Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
+	                        	%io:format("Edges2 ~p~n",[Edges]),
 	                        	{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]++
 	                        		%[{edge,NE,NP,summary_data}]++
 	                        		[{edge,NE,NP,data}]++
 	                        		%changeEdgeTypeNotAcum(Edges,data,summary_data)++
-	                        		changeEdgeType(Edges,dataAux,data),DictTemp};
+	                        		changeEdgeTypeNotAcum(Edges,dataAux,data),DictTemp};
 
 	             		_ -> case TypeNP of
 	                       		{op,'{}',_,_,_} -> {false,[],Dict};
@@ -1086,8 +1092,8 @@ changeEdgeType([E|Es],OldType,NewType)->
 changeEdgeTypeNotAcum([],_,_)->[];
 changeEdgeTypeNotAcum([{edge,NS,NT,OldType}|Es],OldType,NewType)->
 	[{edge,NS,NT,NewType}]++changeEdgeTypeNotAcum(Es,OldType,NewType);
-changeEdgeTypeNotAcum([_|Es],OldType,NewType)->
-	changeEdgeTypeNotAcum(Es,OldType,NewType).    
+changeEdgeTypeNotAcum([E|Es],OldType,NewType)->
+	[E]++changeEdgeTypeNotAcum(Es,OldType,NewType).    
     
     
 allArgsHold(_,[],[])->true;
