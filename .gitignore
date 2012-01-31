@@ -9,5 +9,4 @@ target/
 .dump
 temp.dot
 temp_tt.erl
-erl_crash.dump
 temp.serial

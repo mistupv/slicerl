@@ -781,8 +781,10 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                                  				{Return,Edges,DictTemp}=
 	                                  					graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
 	                                  				{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
-	                                  					++[{edge,NE,NP,summary_data}]
-	                                  					++[{edge,NE,NP,data}]++changeEdgeTypeNotAcum(Edges,data,summary_data)++changeEdgeTypeNotAcum(Edges,dataAux,data),DictTemp};
+	                                  					%++[{edge,NE,NP,summary_data}]
+	                                  					++[{edge,NE,NP,data}]++
+	                                  					%changeEdgeTypeNotAcum(Edges,data,summary_data)++
+	                                  					changeEdgeType(Edges,dataAux,data),DictTemp};
 	                                  			_ -> {false,[],Dict}
 	                             			end
 	                   		end
@@ -818,7 +820,10 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                        	{NodesPM,NodesDecl}=findPMVar(V,Dict),
 	                        	{Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
 	                        	{Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]++
-	                        		[{edge,NE,NP,summary_data}]++[{edge,NE,NP,data}]++changeEdgeTypeNotAcum(Edges,data,summary_data)++changeEdgeTypeNotAcum(Edges,dataAux,data),DictTemp};
+	                        		%[{edge,NE,NP,summary_data}]++
+	                        		[{edge,NE,NP,data}]++
+	                        		%changeEdgeTypeNotAcum(Edges,data,summary_data)++
+	                        		changeEdgeType(Edges,dataAux,data),DictTemp};
 
 	             		_ -> case TypeNP of
 	                       		{op,'{}',_,_,_} -> {false,[],Dict};
