@@ -3,16 +3,31 @@
 
 -export([main/0]).
 
-main() -> A=3,
+main() -> 	A=3,
 	  %{X,W}= {A,{1,3}},
 	  %{Y,X} = W.
 	  %X={1,2},
 	  %{Y,Z} = X.
-	   J={5,5},
-	  {X,(W=J)}= {A,{5,5}},
+  		J={5,5},
+	  	{X,(J=W)}= {A,{5,5}},
 	  %{Y,(Q=J)}= {A,{5,5}},
 	  %{Q1,Q2}=Q,
-	  {Z1,Z2}=W.
+	  	{Z1,Z2}=W.
+	  
+	  %Y={1,1},
+	  %W=Y,
+	  %{1,V}=W.
+	  
+	  %Y=1,
+	  %X=1,
+	  %1=X.
+	  
+	  
+	  
+	 %J={5,undef},
+         %{_,(W=J)}= {undef,undef},
+         %{Z1,_}=W.
+         %f(1).
 	  %f(W),
           %{Y,{Z1,Z2}} = W.
           %{Y,{Z1,Z2}} = W.
@@ -129,8 +144,3 @@ main() -> A=3,
 %add(A,B) -> A.%+a(A,B).
 %
 %t({0,0})->0.
-
-
-%Problema --> En les noves crides a graphMatchging no podem pasarli els nodes del patternMatching original asoles. Hi hauria que pasarli els nodes als que s'esta fent PM (tercer camp)???? 
-%Conforme esta la funció graphMatchging ara, necessita els nodes implicats en el PM, sin embargo... les noves crides la part dreta del PM son els nodes als que apunta el tercer camp del diccionari...estos nodes no estan inclosos en els nodes que se li pasen com a argument. Com ho arreglem?? No podem pasarli tots els nodes del arbre pq estem analitzant sols una expressió en particular.
-%Possible solució--> Anar pasant tots els nodes acumulats fins ara dins de les expressions...
