@@ -1,5 +1,5 @@
 %c(slicErlang),c(slicErlangDot),slicErlang:start(0),slicErlangDot:start(0).
-						%c(slicErlang),c(slicErlangDot),c(slicErlangSlice),slicErlang:start(0),slicErlangDot:start(0),slicErlangSlice:start(0).
+%c(slicErlang),c(slicErlangDot),c(slicErlangSlice),slicErlang:start(0),slicErlangDot:start(0),slicErlangSlice:start(0).
 
 -module(slicErlang).
 
@@ -10,7 +10,7 @@ start(_) ->
 	{ok,Abstract} = smerl:for_file("temp.erl"),
     	Forms=lists:reverse(smerl:get_forms(Abstract)),
     	{Nodes,Edges,_,_} = graphForms(Forms,0,[],[]),
-    	
+	
     	TypeInfo=slicErlangType:getFunTypes(Forms,Abstract),
     	CallsInfo = lists:sort(buildCallsInfo(Nodes,Edges,[Node_||{node,Node_,{call,_}}<-Nodes])),
     	CallsInfoWithTypes = addTypeInfo(CallsInfo,TypeInfo,0),
@@ -173,9 +173,23 @@ graphTerm(Term,Free,VarsDict,NodesAcum)->
 %%%%%%%%%%%%%%%%%%%    GRAPH EXPRESSIONS         %%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-graphExpression(Term={var,_,_},Free,VarsDict,pat,NodesAcum)->
+graphExpression(Term={var,_,V},Free,VarsDict,pat,NodesAcum)->
 	{Ns,_,NFree,_,First,Lasts,NodesAcumN}=graphTerm(Term,Free,VarsDict,NodesAcum),
-	{Ns,[],NFree,VarsDict,
+        {EdgeUse,NVarsDict}=
+            case V of
+        	'_' -> {[], VarsDict};
+        	 _ ->
+		    case existVarDict(V,VarsDict) of
+			true -> 	                       		    	
+			    {[{edge,NodeDecl,Free,data} ||
+			                		{VarD,NDs,_} <- VarsDict,
+			                		NodeDecl<-NDs,
+			                       		V==VarD],
+			     VarsDict};
+			_ -> {[],VarsDict++[{V,[Free],undef}]}
+		    end
+	    end,
+	{Ns,EdgeUse,NFree,NVarsDict,
 	First,Lasts,NodesAcumN};
 graphExpression(Term={var,_,V},Free,VarsDict,patArg,NodesAcum)->
 	{Ns,_,NFree,_,First,Lasts,NodesAcumN}=graphTerm(Term,Free,VarsDict,NodesAcum),
@@ -312,12 +326,20 @@ graphExpression({call,_,F0,As0},Free,VarsDict,exp,NodesAcum)->
     	};
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 graphExpression({match,_,P0,E0},Free,VarsDict,PatExp,NodesAcum)->
-    	{NodesP,EdgesP,NFree,NVarsDict,FirstsP,_,NodesAcumN}=graphExpression(P0,Free+1,VarsDict,pat,NodesAcum),
+    	{NodesP,EdgesP,NFree,NVarsDict,FirstsP,LastP,NodesAcumN}=graphExpression(P0,Free+1,VarsDict,pat,NodesAcum),
     	{NodesE,EdgesE,NNFree,NNVarsDict,FirstsE,LastE,NodesAcumNN}=
     			graphExpression(E0,NFree,NVarsDict,PatExp,NodesAcumN),
-    	N_match = {node,Free,{pm,[NFree],LastE}},
+	N_match = 
+	    	case PatExp of
+	    		exp -> {node,Free,{pm,[NFree],LastE}};
+	    		_ -> {node,Free,{pm,[Free+1,NFree],LastP++LastE}}
+	    	end,
 	NodesAcumNNN = NodesAcumNN++[N_match],
-    	{Res,EdgesPMAux,NNNVarsDict}=graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN,false),
+	{Res,EdgesPMAux,NNNVarsDict}=
+		case PatExp of
+	    		exp -> graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN,PatExp);
+	    		_ -> {true,[], NNVarsDict}
+	    	end,
     	case Res of
 	    	true -> EdgesPM=EdgesPMAux;
 	    	_ -> EdgesPM=[]
@@ -333,11 +355,13 @@ graphExpression({match,_,P0,E0},Free,VarsDict,PatExp,NodesAcum)->
       		NNFree,
       		NNNVarsDict,
       		[Free],
-      		LastE,
+      		case PatExp of
+      			exp -> LastE;
+      			_ -> LastP++LastE
+      		end,
       		NodesAcumNNN
     	};
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 graphExpression(Term={op,_,Op,A0},Free,VarsDict,exp,NodesAcum)->
     	{Nodes,Edges,NFree,NVarsDict,Firsts,Lasts,NodesAcumN}=graphExpression(A0,Free+1,VarsDict,exp,NodesAcum),
     	N_op = {node,Free,{op,Op,Term,[Free+1],Lasts}},
@@ -516,45 +540,48 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 %%%%%%%%%%%%%%%%%%%      GRAPH MATCHING          %%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
+graphMatching(NP,NE,Dict,NodesAcum,From)->
     [{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
     [{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
-    %io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n",[NP,NE,TypeNP,TypeNE]),
+    %io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n~w~n",[NP,NE,TypeNP,TypeNE,Dict]),
 
-	case {TypeNP,TypeNE} of
-	    {{term,TermP},{term,TermE}} -> 
-		case termEquality(TermP,TermE) of
+	case {TypeNP,TypeNE} of      
+	    {{term,TermP},{term,TermE}} ->    %Los dos son términos
+		case termEquality(TermP,TermE) of      %iguales?
 	            true -> %{true,[{edge,NE,NP,data}],Dict};
 	            	    {true,[],Dict};
 	            _ ->    
 	                case TermP of
-	                    {var,_,V} -> 
+	                    {var,_,V} ->      %No son iguales i PM es var
 	                        case V of
 	                            '_' ->  
-                       	                case FromIO of
-                       			    true -> {true,[{edge,NE,NP,data}],Dict};
+                       	                case From of 		%Es unua llamada desde la construcción de las IO edges
+                       			    io -> {true,[{edge,NE,NP,data}],Dict};
                        			    _ -> {true,[],Dict}
                        		        end;
 	                       	    _ -> 	
-	                       		case existVarDict(V,Dict) of
-	                       		    true -> 
-	                       		    	{NodesPM,_}=findPMVar(V,Dict),
-	                       			EdgeUse = [{edge,NodeDecl,NP,data}||
-	                       				                   {VarD,[NodeDecl|_],_} <- Dict,
-	                       				                   V==VarD],
-	                       			{Return,_,_} = graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
-	                       			{Return,EdgeUse,Dict};
-	                       		    _ ->    
+	                       		case existVarDictGM(V,Dict,NP) of
+	                       		    true -> %Variable definida
+	                       		    	%{NodesPM,_}=findPMVar(V,Dict),
+	                       			%EdgeUse = [{edge,NodeDecl,NP,data}||
+	                       			%	                   {VarD,[NodeDecl|_],_} <- Dict,
+	                       			%	                   V==VarD],
+	                       			%{Return,_,_} = graphMatchingList(NP,NodesPM,Dict,NodesAcum,From),
+	                       			%{Return,EdgeUse,Dict};	                       			
+	                       			{true,[],Dict};
+	                       		    _ ->     %Se esta definiendo aqui
+	                       		        DictTemp=[{V_,DV,[NE]}||{V_,DV,undef}<-Dict,V_==V]
+	                       		        	++[DE||DE={V_,_,_}<-Dict,V_/=V],
 	                       		    	EdgeUse=[{edge,NE,NP,data}],
-	                     			DictTemp=Dict++[{V,[NP],[NE]}],
+	                     			%DictTemp=Dict++[{V,[NP],[NE]}],
 	                     			{true,EdgeUse,DictTemp}
 	                       		end
 	                       	end;	
 	                    _ -> 
-	                        case TermE of
-	                            {var,_,V} -> 
+	                        case TermE of  
+	                            {var,_,V} ->    %No son iguales, PM NO es var i PE es var ---> a=X   (X tiene que estar definida)
 	                            	{NodesPM,_}=findPMVar(V,Dict),
-	                                {Return,_,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
+	                                {Return,_,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,From),
 %	                                {Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
 %	                                  		%++[{edge,NE,NP,summary_data}]
 %	                                  		++[{edge,NE,NP,data}]++
@@ -565,62 +592,74 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 	                        end
 	                end
 	        end;
-            {{term,TermP},_} -> 	
+            {{term,TermP},_} ->  %El PM es un termino i PE no.	
 	        case TermP of
 	            {var,_,V}-> 
-	            	case V of
+	            	case V of  %PM es var
 	                    '_' -> 
-	                    	case FromIO of
-	                      	    true -> {true,[{edge,NE,NP,data}],Dict};
+	                    	case From of
+	                      	    io -> {true,[{edge,NE,NP,data}],Dict};
 	                            _ -> {true,[],Dict}
 	                       	end;
 	                    _ -> 
-	                       	case existVarDict(V,Dict) of
-	                            true -> 
-	                       		EdgeUse=[{edge,NodeDecl,NP,data} ||
-	                       				{VarD,[NodeDecl|_],_}<-Dict,
-	                       				V==VarD],
+	                       	case existVarDictGM(V,Dict,NP) of   
+	                            true ->  		%Variable ya declarada
+	                       		%EdgeUse=[{edge,NodeDecl,NP,data} ||
+	                       		%		{VarD,[NodeDecl|_],_}<-Dict,
+	                       		%		V==VarD],
+	                       		EdgeUse=[],
 	                       		DictTemp=Dict;
-	                       	    _ ->    
-	                       		EdgeUse=[{edge,Last,NP,data}||Last <- lasts(TypeNE)],
-	                     		DictTemp=Dict++[{V,[NP],[NE]}]
+	                       	    _ ->    		%Se esta declarando la variable
+	                       		EdgeUse=[{edge,Last,NP,data}||Last <- lasts(TypeNE)],%++[{edge,NP,NE,data}],
+	                    	        DictTemp=[{V_,DV,[NE]}||{V_,DV,undef}<-Dict,V_==V]
+	                       		        ++[DE||DE={V_,_,_}<-Dict,V_/=V]
+	                     		%DictTemp=Dict++[{V,[NP],[NE]}]
 	                       	end,
 	                       	{true,EdgeUse,DictTemp}
                 	end;
-	             _ ->
-	             	case TypeNE of
+	             _ ->   %El PM No es variable
+	             	case TypeNE of 
                             {op,'{}',_,_,_} -> {false,[],Dict};
                       	    {op,'[]',_,_,_} -> {false,[],Dict};
                        	    {function_in,_,_,_,_} -> {false,[],Dict};
                        	    {op,_,_,_,Lasts} -> {true,[{edge,Last,NP,data}||Last <- Lasts],Dict};
                        	    {call,Return} -> {true,[{edge,Return,NP,data}],Dict};
-                       	    _ ->  graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
+                       	    _ ->  
+                       	        graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,From)
 	               end
 	        end;
-	    {_,{term,TermE}} ->
+	    {_,{term,TermE}} -> %PM no es termino pero PE si
 		case TermE of
-		    {var,_,V} -> 
-	            	{NodesPM,NodesDecl}=findPMVar(V,Dict),
-	                {Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,FromIO),
-	                {
-	                    Return,
-	                    [{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
-	                        %++[{edge,NE,NP,summary_data}]
-	                        ++ [{edge,NE,NP,data}]
-	                        %++changeEdgeTypeNotAcum(Edges,data,summary_data)
-	                        ++changeEdgeTypeNotAcum(Edges,dataAux,data),
-	                        DictTemp
-	                    };
-		    _ -> 
+		    {var,_,V} -> %PE es var
+			 {NodesPM,NodesDecl}=findPMVar(V,Dict),
+			 %[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE]
+                	 {Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,From),
+	                 {
+	                     Return,
+	                     [{edge,NodeDecl,Last,summary_data} ||  
+	                     		NodeDecl<-NodesDecl,
+	                     		Last<-lasts(TypeNP),
+	                     		not hasValue(Last,NodesAcum, Dict)]
+	                         %%++[{edge,NE,NP,summary_data}]
+	                         ++[{edge,NE,Last,data} || 
+	                         	Last<-lasts(TypeNP),
+	                         	not hasValue(Last,NodesAcum, Dict)]
+	                         ++Edges,	
+	                         %%++changeEdgeTypeNotAcum(Edges,data,summary_data)
+	                         DictTemp
+	                 };
+		    	%end;
+		    _ ->     %PE no es Var
 	             	case TypeNP of
 	                    {op,'{}',_,_,_} -> {false,[],Dict};
 	                    {op,'[]',_,_,_} -> {false,[],Dict};
-	                    _ -> graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,FromIO)
+	                    _ -> 
+			        graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,From)
 	                end
 		end;
-	    _ -> 
+            _ ->    %Ni PM es var ni PE tampoco --> Son listas, tuplas o PM
 	        case TypeNP of
-		    {op,'{}',_,_,_} -> 
+		    {op,'{}',_,_,_} ->    
 	                case TypeNE  of 
 	      		    {op,'[]',_,_,_} -> {false,[],Dict};
 	              	    {function_in,_,_,_,_} -> {false,[],Dict};
@@ -628,12 +667,13 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 			    {op,'{}',_,_,_} ->
 			        FLastsNP=firstsLasts(TypeNP),
 				FLastsNE=firstsLasts(TypeNE),
-				ResGM=graphMatchingListAll(FLastsNP, FLastsNE,Dict,NodesAcum,FromIO),
+				ResGM=graphMatchingListAll(FLastsNP, FLastsNE,Dict,NodesAcum,From),
 				case ResGM of
-				    {true,DEdges,DictTemp} ->{true,DEdges++[{edge,NE,NP,data}],DictTemp};
+				    {true,DEdges,DictTemp} ->%{true,DEdges++[{edge,NE,NP,data}],DictTemp};
+				    			     {true,DEdges,DictTemp};
 				    _ -> {false,[],Dict}
 				end;
-			    _ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
+			    _ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,From)
 			end;
 		    {op,'[]',_,_,_} -> 
 	               	case TypeNE  of 
@@ -642,15 +682,15 @@ graphMatching(NP,NE,Dict,NodesAcum,FromIO)->
 			    {op,'[]',_,_,_} -> 
 			    FLastsNP=firstsLasts(TypeNP),
 			    FLastsNE=firstsLasts(TypeNE),
-		            ResGM=graphMatchingListAll(FLastsNP, FLastsNE,Dict,NodesAcum,FromIO),
+		            ResGM=graphMatchingListAll(FLastsNP, FLastsNE,Dict,NodesAcum,From),
 			    case ResGM of
 				{true,DEdges,DictTemp} -> {true,DEdges++[{edge,NE,NP,data}],DictTemp};
 				_ -> {false,[],Dict}
 			    end;
-			_ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,FromIO)
+			_ -> graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,From)
 			end;
 		    {pm,_,_} -> 
-		    	graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,FromIO);
+		        graphMatchingListPattern(firstsLasts(TypeNP),NE,Dict,NodesAcum,From);
 		    _ -> {false,[],Dict}
 		end
 	end.
@@ -665,12 +705,12 @@ graphMatchingList(NP,[NE|NEs],Dict,NodesAcum,FromIO)->
 	{Bool1 or Bool2,DataArcs1++DataArcs2,Dict3}. 
 	
 %%%%%%%%%%%%%%%%%%%%%%%%  graphMatchingListPattern  %%%%%%%%%%%%%%%%%%%%%%%%%%%%	
-graphMatchingListPattern([],_,Dict,_,_) -> {false,[],Dict};
+graphMatchingListPattern([],_,Dict,_,_) -> {true,[],Dict};
 graphMatchingListPattern([NP|NPs],NE,Dict,NodesAcum,FromIO)->	
     	%io:format("GMLP: ~w~n",[{NP,NE}]),
 	{Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
 	{Bool2,DataArcs2,Dict3}=graphMatchingListPattern(NPs,NE,Dict2,NodesAcum,FromIO),
-	{Bool1 or Bool2,DataArcs1++DataArcs2,Dict3}.
+	{Bool1 and Bool2,DataArcs1++DataArcs2,Dict3}.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%  graphMatchingListAll  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 graphMatchingListAll([],[],Dict,_,_) -> {true,[],Dict};	
@@ -778,23 +818,23 @@ getApplicableFunctions(Nodes,Edges,[{NodeCalled,NodesArgs,NodeReturn,Types}|Call
 		[{N_in,[NodeCalled]} || 
 				{node,N_in,{function_in,_,Arity,_,_}}<-Nodes,
 				Arity==length(NodesArgs)];
-		{pm,_,_} -> 
-			getApplicableFunctions(Nodes,Edges,
+	    {pm,_,_} -> 
+		getApplicableFunctions(Nodes,Edges,
 				[{NodeCalled_,NodesArgs,NodeReturn,Types} || 
 					     NodeCalled_<-firstsLasts(NCType)],false);
-		{'case',_,_,_} -> 
-			getApplicableFunctions(Nodes,Edges,
+	    {'case',_,_,_} -> 
+		getApplicableFunctions(Nodes,Edges,
 				[{NodeCalled_,NodesArgs,NodeReturn,Types} ||
 						NodeCalled_<-firstsLasts(NCType)],false);
-		{'if',_,_,_} -> 
-			getApplicableFunctions(Nodes,Edges,
+	    {'if',_,_,_} -> 
+		getApplicableFunctions(Nodes,Edges,
 			        [{NodeCalled_,NodesArgs,NodeReturn,Types} ||
 			        		NodeCalled_<-firstsLasts(NCType)],false);
-		{block,_,_,_} ->
-		    	getApplicableFunctions(Nodes,Edges,
+	    {block,_,_,_} ->
+	    	getApplicableFunctions(Nodes,Edges,
 			        [{NodeCalled_,NodesArgs,NodeReturn,Types} ||
 			        		NodeCalled_<-firstsLasts(NCType)],false);		  
-		_ -> []
+	    _ -> []
 	end,
     NInCallsInfo=getApplicableFunctions(Nodes,Edges,CallsInfo,false),
     
@@ -831,7 +871,7 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={_,NodesArgs,NodeReturn,{_,TArgsCa
     			TArgsClause,TArgsCall),
     if
 	Strong -> 
-	    {_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,true), 
+	    {_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,io), 
 	    {
 	        [NodeClauseIn],
 	        [{edge,getParentControl(CNode,Edges),NodeClauseIn,input}||CNode<-CalledNodes]
@@ -840,7 +880,7 @@ inputOutputEdgesFunction(Nodes,Edges,InfoCall={_,NodesArgs,NodeReturn,{_,TArgsCa
 		 	++[{edge,Last,NodeReturn,output}||Last<-Lasts]
 	    };
 	Weak -> 
-	    {_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,true),
+	    {_,EdgesMatch,_}=graphMatchingListAllIO(NodesPatterns,NodesArgs,[],Nodes,io),
 	    {MClauses,NewEdges}=inputOutputEdgesFunction(Nodes,Edges,InfoCall,CalledNodes,ClausesInfo),
 	    {
 	    	[NodeClauseIn| MClauses],
@@ -1004,9 +1044,24 @@ getParentControl(Node,Edges) ->
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%  existVarDict  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-existVarDict(_,[])->false;
+
 existVarDict(V,[{V,_,_} | _]) -> true;
-existVarDict(V,[_ | Dict]) -> existVarDict(V,Dict).
+existVarDict(V,[_ | Dict]) -> existVarDict(V,Dict);
+existVarDict(_,[])->false.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%  existVarDictGM  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+existVarDictGM(V,[{V,ND,undef} | _],NP) -> not lists:member(NP,ND);
+existVarDictGM(V,[{V,_,_} | _],_) -> true;
+existVarDictGM(V,[_ | Dict],NP) -> existVarDictGM(V,Dict,NP);
+existVarDictGM(_,[],_)->false.
+
+%%%%%%%%%%%%%%%%%%%%%%%%  existVarDictUndef  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+existVarDictUndef(V,[{V,_,undef} | _]) -> false;
+existVarDictUndef(V,[{V,_,_} | _]) -> true;
+existVarDictUndef(V,[_ | Dict]) -> existVarDictUndef(V,Dict);
+existVarDictUndef(_,[])->false.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%  getNumNodes  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1016,7 +1071,7 @@ getNumNodes([{node,Num,_}|Nodes])->[Num]++getNumNodes(Nodes).
 
 %%%%%%%%%%%%%%%%%%%%%%%%  findPMVar  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 findPMVar(V,Dict)-> 	
-	case [{NodePM,NodeDecl} || {Var,NodeDecl,NodePM} <-Dict,Var==V] of
+	case [{NodePM,NodeDecl} || {Var,NodeDecl,NodePM} <-Dict,Var==V,NodePM/='undef'] of
 		[Head|_] -> Head;
 		_ -> {[],[]}
 	end.
@@ -1053,17 +1108,39 @@ changeEdgeType([E|Es],OldType,NewType)->
     
     
 %%%%%%%%%%%%%%%%%%%%%%%%  changeEdgeTypeNotAcum  %%%%%%%%%%%%%%%%%%%%%%%%%%%%    
-changeEdgeTypeNotAcum([],_,_)->[];
-changeEdgeTypeNotAcum([{edge,NS,NT,OldType}|Es],OldType,NewType)->
-	[{edge,NS,NT,NewType}]++changeEdgeTypeNotAcum(Es,OldType,NewType);
-changeEdgeTypeNotAcum([E|Es],OldType,NewType)->
-	[E]++changeEdgeTypeNotAcum(Es,OldType,NewType).    
+%changeEdgeTypeNotAcum([],_,_)->[];
+%changeEdgeTypeNotAcum([{edge,NS,NT,OldType}|Es],OldType,NewType)->
+%	[{edge,NS,NT,NewType}]++changeEdgeTypeNotAcum(Es,OldType,NewType);
+%changeEdgeTypeNotAcum([E|Es],OldType,NewType)->
+%	[E]++changeEdgeTypeNotAcum(Es,OldType,NewType).    
     
  
 %%%%%%%%%%%%%%%%%%%%%%%%  allArgsHold  %%%%%%%%%%%%%%%%%%%%%%%%%%%%   
 allArgsHold(_,[],[])->true;
 allArgsHold(F,[TCa|TCas],[TCl|TCls])->
   	F(TCa,TCl) and allArgsHold(F,TCas,TCls).
+  	
+  	
+%%%%%%%%%%%%%%%%%%%%%%%%  hasValue  %%%%%%%%%%%%%%%%%%%%%%%%%%%% 
+hasValue(_,[],_) -> false;
+hasValue(Node,[{node,NumNode,Type}|_],Dict) when Node==NumNode ->
+	 case Type of
+	     {term,TermNC} -> 
+	 	case TermNC of
+	 	    {var,_,V} -> 
+	 	        case V of
+	 	            '_' -> true;
+	 	            _ -> existVarDictUndef(V,Dict)
+	 	        end;
+	 	    _ -> true
+	 	end;
+	     _ -> true
+	 end;
+hasValue(Node,[_|Nodes],Dict) -> hasValue(Node,Nodes,Dict).	    
+	     
+	 	       	 	            
+	 	
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%  leaves  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %leaves(N,Ns,Es) ->

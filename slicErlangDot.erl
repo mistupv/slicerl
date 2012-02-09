@@ -13,7 +13,7 @@ start(_) ->
 	{value,{Nodes,Edges},_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
     	{ok, Device} = file:open("shows.txt", [read]),
     	Shows={list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
-              list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
+               list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")), 			list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
     	ok=file:close(Device),
     	dotGraph(Nodes,Edges,"temp.dot",Shows).
     
@@ -46,16 +46,18 @@ dotNodeInfo(Type, _Id) ->
     	NodeId = ?SHOW(_Id),
 	DotType=
 	case Type of
-		{function_in,NomFunc,Arity,_,_} -> "(function_in)  "++atom_to_list(NomFunc)++"/"++integer_to_list(Arity);
-		%{function_out,NomFunc,Arity,_} -> "(function_out)  "++atom_to_list(NomFunc)++"/"++integer_to_list(Arity);
+		{function_in,NomFunc,Arity,_,_} -> 
+			"(function_in)  "
+			++atom_to_list(NomFunc)
+			++"/"++integer_to_list(Arity);
 		{clause_in,_,_} -> "clause_in";
-		%{clause_out,_} -> "clause_out";
-		%{pattern,Pat} -> "(pattern)  "++addNewLine(Pat)++replace(lists:flatten(erl_pp:expr(Pat)));
-		%{expression,Exp} ->"(exp)  "++addNewLine(Exp)++replace(lists:flatten(erl_pp:expr(Exp)));
-		{guards,Guards} -> case Guards of
-					[] -> "(guards) []";
-		                        _ -> "(guards)  "++addNewLine(Guards)++replace(lists:flatten(erl_pp:guard(Guards)))
-		                   end;
+		{guards,Guards} -> 
+			case Guards of
+				[] -> "(guards) []";
+		                 _ -> "(guards)  "
+		                 	++addNewLine(Guards)
+		                 	++replace(lists:flatten(erl_pp:guard(Guards)))
+		        end;
 		{'case',_,_,_} -> "case";
 		{'if',_,_,_} -> "if";
 		{block,_,_,_}-> "block";
@@ -63,7 +65,9 @@ dotNodeInfo(Type, _Id) ->
 		{gen,_}->"gen";
 		{call,_} -> "call";
 		return -> "return";
-		{term,Term} -> "(term)  "++addNewLine(Term)++replace(lists:flatten(erl_pp:expr(Term)));
+		{term,Term} -> "(term)  "
+				++addNewLine(Term)
+				++replace(lists:flatten(erl_pp:expr(Term)));
 		{pm,_,_} -> "pm";
 		{op,Op,_,_,_} -> "(op) " ++ atom_to_list(Op);
 		{body,_} -> "body";
