@@ -60,10 +60,11 @@ graphForms([_|Funs],Free,VarsDict,NodesAcum)->graphForms(Funs,Free,VarsDict,Node
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 graphClauses([],Free,VD,NodesAcum,_,_)->	{[],[],Free,VD,[],[],[],[],NodesAcum,[]};
 graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,ClausesAcum) ->
-    case From of
-    	func -> Type=pat;
-    	_ -> Type=patArg
-    end,
+    Type =
+        case From of
+    	    func -> pat;
+    	    _ -> patArg
+        end,
     {N1,E1,Free1,VD1,F1,_,_,NodesAcumN} = graphExpressions(Patterns,Free0+1,VD0,Type,NodesAcum),
     VD2=VD1++[{Var,NodesDecl,NodesPM} ||
        			{Var,NodesDecl,NodesPM}<-VD0,[Var1||{Var1,_,_}<-VD1,Var1==Var]==[]],
@@ -76,13 +77,14 @@ graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,
     {N4,E4,Free4,VD4,F3,L3,FL3,FC3,NodesAcumNNNN,ClausesAcumN} = 
     		graphClauses(Clauses,Free3,VD0,NodesAcumNNN,From,ClausesAcum++[{Free0,getNumNodes(N1)}]),
     N_in = {node,Free0,{clause_in,FL2,L2}},
-    case From of
-    	func -> EdgesLinkClauses=edgesLinkClauses(
+    EdgesLinkClauses = 
+        case From of
+    	    func -> edgesLinkClauses(
     			getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD3,NodesAcumNNNN++[N_in]);
-    	exp_case -> EdgesLinkClauses=edgesLinkClauses(
+    	    exp_case -> edgesLinkClauses(
     			getNumNodes(N_body),getNumNodes(N1),ClausesAcum,VD3,NodesAcumNNNN++[N_in]);
-    	exp_if -> EdgesLinkClauses=edgesClausesAll(getNumNodes(N_body),getNumNodes(N1),ClausesAcum)
-    end,
+    	    exp_if -> edgesClausesAll(getNumNodes(N_body),getNumNodes(N1),ClausesAcum)
+        end,
     EdgesPatternGuard=[{edge,NP,Free1,data} ||
         		       {node,NP,{term,Term}} <- N1,
     			       [NP1 ||
@@ -137,7 +139,9 @@ edgesClausesAll([N_body],Patterns,[{N_in,_}|ClausesAcum]) ->
 %% GRAPH GUARDS & TERMS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 graphGuards(Guards,Free,VarsDict,NodesAcum) -> 
-    Vars = removeDuplicates(lists:flatten([Var||Guard <- Guards,Var<-lists:map(fun varsExpression/1,Guard)])),
+    Vars = removeDuplicates(lists:flatten([Var ||
+    						Guard <- Guards,
+    				   		Var<-lists:map(fun varsExpression/1,Guard)])),
     N_guard = {node,Free,{guards,Guards}},
     {		
     	[N_guard],
@@ -329,19 +333,19 @@ graphExpression({match,_,P0,E0},Free,VarsDict,PatExp,NodesAcum)->
     		graphExpression(E0,NFree,NVarsDict,PatExp,NodesAcumN),
     N_match = 
     	case PatExp of
-    		exp -> {node,Free,{pm,[NFree],LastE}};
-    		_ -> {node,Free,{pm,[Free+1,NFree],LastP++LastE}}
+    	    exp -> {node,Free,{pm,[NFree],LastE}};
+    	    _ -> {node,Free,{pm,[Free+1,NFree],LastP++LastE}}
     	end,
     NodesAcumNNN = NodesAcumNN++[N_match],
     {Res,EdgesPMAux,NNNVarsDict}=
 	case PatExp of
-    		exp -> graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN,PatExp);
-    		_ -> {true,[], NNVarsDict}
+    	    exp -> graphMatching(Free+1,NFree,NNVarsDict,NodesAcumNNN,PatExp);
+    	    _ -> {true,[], NNVarsDict}
     	end,
     	EdgesPM=
     	case Res of
-	    	true -> EdgesPMAux;
-	    	_ -> []
+	    true -> EdgesPMAux;
+	    _ -> []
     	end,
     	{
       	    [N_match]
@@ -402,11 +406,11 @@ graphExpression({lc,LINE,E,GensFilt},Free,VarsDict,PatExp,NodesAcum)->
 					graphExpression(E,NFree,NVarsDict,PatExp,NodesAcumN),
 	
     LastsGens2ExpAux = [{edge,Last,First,control}||First <- FirstsExpLC , Last <-LastsGensFilt],
-    case LastsGens2ExpAux of
-	[] -> LastsGens2Exp = [{edge,Free,First,control}||First <- FirstsExpLC];
-	_ -> LastsGens2Exp = LastsGens2ExpAux
-    end,
-    
+    LastsGens2Exp =
+    	case LastsGens2ExpAux of
+	    [] -> [{edge,Free,First,control}||First <- FirstsExpLC];
+	    _ -> LastsGens2ExpAux
+    	end,
     {
 	[N_lc]
 		++ NodesGensFilt 
@@ -702,8 +706,27 @@ graphMatchingList(_,[],Dict,_,_) -> {false,[],Dict};
 graphMatchingList(NP,[NE|NEs],Dict,NodesAcum,FromIO)->	
     %io:format("GML: ~w~n",[{NP,NE}]),
     {Bool1,DataArcs1,Dict2}=graphMatching(NP,NE,Dict,NodesAcum,FromIO),
-    {Bool2,DataArcs2,Dict3}=graphMatchingList(NP,NEs,Dict2,NodesAcum,FromIO),
-    {Bool1 or Bool2,DataArcs1++DataArcs2,Dict3}. 
+    {Bool2,DataArcs2,Dict3}=graphMatchingList(NP,NEs,Dict,NodesAcum,FromIO),
+    NDict=[ Entry || Entry={Var2,Decl2,PM2}<-Dict2, {Var3,Decl3,PM3}<-Dict3, Var2==Var3, Decl2==Decl3, PM2==PM3]
+            ++ [{Var2,removeDuplicates(Decl2++Decl3),removeDuplicates(PM2++PM3)} || 
+            					{Var2,Decl2,PM2}<-Dict2, 
+            					{Var3,Decl3,PM3}<-Dict3, 
+            					Var2==Var3, 
+            					(Decl2/=Decl3) or (PM2/=PM3),
+            					(PM2/='undef') and (PM3/='undef')]
+            ++ [{Var2,removeDuplicates(Decl2++Decl3),PM3} || 
+            					{Var2,Decl2,PM2}<-Dict2, 
+            					{Var3,Decl3,PM3}<-Dict3, 
+            					Var2==Var3, 
+            					(Decl2/=Decl3) or (PM2/=PM3),
+            					(PM2=='undef') and (PM3/='undef')]
+            ++ [{Var2,removeDuplicates(Decl2++Decl3),PM2} || 
+            					{Var2,Decl2,PM2}<-Dict2, 
+            					{Var3,Decl3,PM3}<-Dict3, 
+            					Var2==Var3, 
+            					(Decl2/=Decl3) or (PM2/=PM3),
+            					(PM2/='undef') and (PM3=='undef')],
+    {Bool1 or Bool2,DataArcs1++DataArcs2,removeDuplicates(NDict)}.
 	
 %%%%%%%%%%%%%%%%%%%%%%%%  graphMatchingListPattern  %%%%%%%%%%%%%%%%%%%%%%%%%%%%	
 graphMatchingListPattern([],_,Dict,_,_) -> {true,[],Dict};
@@ -724,9 +747,10 @@ graphMatchingListAll([NP|NPs],[NE|NEs],Dict,NodesAcum,FromIO)->
     case Bool1 of 
         true -> 
             {Bool2,DataArcs2,Dict3}=graphMatchingListAll(NPs,NEs,Dict2,NodesAcum,FromIO),
-            {Bool2,DataArcs1++DataArcs2,Dict3};
+	    {Bool2,DataArcs1++DataArcs2,Dict3};
 	false-> {false,[],Dict}
-    end. 
+    end.  
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%  graphMatchingListAllIO  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 graphMatchingListAllIO([],[],Dict,_,_) -> {true,[],Dict};	
