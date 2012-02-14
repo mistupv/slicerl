@@ -268,19 +268,22 @@ graphExpression(Term={'if',_,Cs0},Free,VarsDict,exp,NodesAcum)->
       	NodesAcumN++[N_if]
     };
 graphExpression(Term={'case',_,E,Cs0},Free,VarsDict,exp,NodesAcum)->
-    {NodesE,EdgesE,NFree,NVarsDict,FirstsE,_,NodesAcumN}=graphExpression(E,Free+1,VarsDict,exp,NodesAcum), 
+    {NodesE,EdgesE,NFree,NVarsDict,FirstsE,LastsExp,NodesAcumN}=graphExpression(E,Free+1,VarsDict,exp,NodesAcum), 
     {NodesClauses,EdgesClauses,NNFree,NNVarsDict,FirstsClauses,LastsClauses,FLasts,FPat,NodesAcumNN,_}=
 		graphClauses(Cs0,NFree,NVarsDict,NodesAcumN,exp_case,[]),
     N_case = {node,Free,{'case',Term,FLasts,LastsClauses}},
     NodesAcumNNN = NodesAcumNN++[N_case],
-    {_,EdgesPM,NNNVarsDict}=graphMatchingListPattern(FPat,Free+1,NNVarsDict,NodesAcumNNN,false),
+    EdgeExp2Clauses=[{edge,LastExp,First+1,data} || First <- FirstsClauses,LastExp<-LastsExp],
+    io:format("EdgeExp2Clauses ~p~n",[EdgeExp2Clauses]),
+    {_,EdgesPM,NNNVarsDict}=graphMatchingListPattern(FPat,Free+1,NNVarsDict,NodesAcumNNN,io),
     {
      	[N_case]++NodesE++NodesClauses,
       	EdgesE
       		++EdgesClauses
       		++EdgesPM
        		++[{edge,Free,First,control}||First <- FirstsE]
-       		++[{edge,Free,FirstC,control}||FirstC <- FirstsClauses],
+       		++[{edge,Free,FirstC,control}||FirstC <- FirstsClauses]
+       		++ EdgeExp2Clauses,
       	NNFree,
       	NNNVarsDict,
      	[Free],
@@ -547,7 +550,7 @@ graphExpressionsLast([Expression|Expressions],Free,VarsDict,PatExp,NodesAcum) ->
 graphMatching(NP,NE,Dict,NodesAcum,From)->
     [{node,NP,TypeNP}|_] = [Node||Node={node,NP_,_}<-NodesAcum,NP_==NP],
     [{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE],
-    %io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n~w~n",[NP,NE,TypeNP,TypeNE,Dict]),
+    io:format("~ngraphMatching: ~w~n ~w~n ~w~n ~w~n~w~n",[NP,NE,TypeNP,TypeNE,Dict]),
 
 	case {TypeNP,TypeNE} of      
 	    {{term,TermP},{term,TermE}} ->    %Los dos son términos
@@ -633,9 +636,10 @@ graphMatching(NP,NE,Dict,NodesAcum,From)->
                        	        graphMatchingList(NP,firstsLasts(TypeNE),Dict,NodesAcum,From)
 	               end
 	        end;
-	    {_,{term,TermE}} -> %PM no es termino pero PE si
+	    {_,{term,TermE}} -> %P no es termino pero PE si
 		case TermE of
 		    {var,_,V} -> %PE es var
+		    	 %io:format("Este es el cas~n"),
 			 {NodesPM,NodesDecl}=findPMVar(V,Dict),
 			 %[{node,NE,TypeNE}|_] = [Node||Node={node,NE_,_}<-NodesAcum,NE_==NE]
                 	 {Return,Edges,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,From),
