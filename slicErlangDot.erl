@@ -95,7 +95,7 @@ dotNodeType(Type,Id,Slice)->
 	end)++
 	(case [Id_||Id_<-Slice,Id_==Id] of
 		[]-> "";
-	      	_-> " color=\"purple\" fontcolor=\"purple\""
+	      	_-> "style=filled color=\"gray\" fontcolor=\"black\" fillcolor=\"gray\""
 	 end)
 	 ++"];".
 
