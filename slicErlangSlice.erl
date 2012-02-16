@@ -92,14 +92,14 @@ sliceFrom(Nodes,Edges,Slices,AccSlices,Followed,Follow_data)->
 	%NSlices=removeDuplicates(Slices++Parents++FollowingSummaries),
 	%NSlices=removeDuplicates(Slices++Parents),
 	%New = sets:to_list(sets:subtract(sets:from_list(AccSlices++Slice),sets:from_list(Parents))),
-	io:format("\nParents: ~w   ParentsSD: ~w~n",[Parents, ParentsSD]),
-	io:format("\nBool1: ~w   Bool2: ~w~n",[(sets:subtract(sets:from_list(Parents),sets:from_list(AccSlices++Slices)) == sets:from_list([])), (sets:subtract(sets:from_list(ParentsSD),sets:from_list(AccSlices++Slices)) == sets:from_list([]))]),
+	%io:format("\nParents: ~w   ParentsSD: ~w~n",[Parents, ParentsSD]),
+	%io:format("\nBool1: ~w   Bool2: ~w~n",[(sets:subtract(sets:from_list(Parents),sets:from_list(AccSlices++Slices)) == sets:from_list([])), (sets:subtract(sets:from_list(ParentsSD),sets:from_list(AccSlices++Slices)) == sets:from_list([]))]),
 	StopCond = (sets:subtract(sets:from_list(Parents),sets:from_list(AccSlices++Slices)) == sets:from_list([])) 
 	  and (sets:subtract(sets:from_list(ParentsSD),sets:from_list(AccSlices++Slices)) == sets:from_list([])),
 	case StopCond of
 		true -> AccSlices++Slices;
-	     	_ -> sliceFrom(Nodes,Edges,removeDuplicates(ParentsSD),removeDuplicates(AccSlices++Slices),Followed,false)
-	     	     ++ sliceFrom(Nodes,Edges,removeDuplicates(Parents),removeDuplicates(AccSlices++Slices),Followed,true)
+	     	_ -> SlicesSD = sliceFrom(Nodes,Edges,removeDuplicates(ParentsSD),removeDuplicates(AccSlices++Slices),Followed,false),
+	     	     sliceFrom(Nodes,Edges,removeDuplicates(Parents),removeDuplicates(AccSlices++Slices++SlicesSD),Followed,true)
 	end.
 
 
