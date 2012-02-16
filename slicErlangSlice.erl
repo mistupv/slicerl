@@ -17,7 +17,8 @@ start(_) ->
 %    	ok=file:close(DeviceEnd),
     	{ok, DeviceS} = file:open("shows.txt", [read]),
     	Shows={list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),
-           list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
+           list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))
+           ,list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
     	ok=file:close(DeviceS),
 %    	{ok,FileContentBin}=file:read_file("temp.erl"),
 %    	FileContent=binary_to_list(FileContentBin),
@@ -41,7 +42,9 @@ start(_) ->
 %    	IdSC=searchSlicingCriterion(NodesAux,EdgesAux,Edges),
 %    	IdSC=[IdSC_||{node,IdSC_,{expression,{atom,_,slicing_criterion}}}<-NodesAux]
 %            ++[IdSC_||{node,IdSC_,{pattern,{atom,_,slicing_criterion}}}<-NodesAux],
-	IdSC=[71],
+	[_|IdSC_]=lists:reverse(io:get_line("CS? :")),
+	IdSC=[list_to_integer(lists:reverse(IdSC_))],
+	io:format("IdSC~p~n",[IdSC]),
     	case IdSC of
         	[] -> io:format("Selected code is not valid to perform slicing~n");
          	_ ->  %[NodeSlice|_]=IdSC,
@@ -66,25 +69,56 @@ searchSlicingCriterion(Nodes,_,_,"slicing_criterion")->
 sliceFromList(_,_,[])->[];
 sliceFromList(Nodes,Edges,SC)->
     	io:format("*************~n INPUTS ~n*************~n",[]),
-	FollowingInput = sliceFrom(Nodes,Edges,SC,input),
+	FollowingInput= sliceFrom(Nodes,Edges,SC,[],input,true),
 	io:format("*************~n OUTPUTS ~n*************~n",[]),
-	sliceFrom(Nodes,Edges,FollowingInput,output).
+	FollowingOutput= sliceFrom(Nodes,Edges,FollowingInput,[],output,false),
+	FollowingOutput.
 	
-	
-sliceFrom(Nodes,Edges,Slices,Followed)->
-    	io:format("Slices: ~w~n",[{lists:sort(Slices)}]),
-	Parents = [N_||N__<-Slices,Type<-[data,control,summary,Followed],
+
+sliceFrom(_,_,[],AccSlices,_,_)-> AccSlices;	
+sliceFrom(Nodes,Edges,Slices,AccSlices,Followed,Follow_data)->
+    	%io:format("\nFollow_data: ~p Slices: ~w~n",[Follow_data ,lists:sort(sets:to_list(sets:from_list(Slices)))]),
+    	TypesFollowed = 
+    	  case Follow_data of
+    	       true -> [data,control,summary,Followed];
+    	       false ->[control,summary,Followed]
+    	  end,       
+	Parents = [N_||N__<-Slices,Type<-TypesFollowed,
 	       		{edge,N_,N,Type_}<-Edges,N==N__,Type_==Type],
+        ParentsSD = [N_||N__<-Slices,{edge,N_,N,Type_}<-Edges,N==N__,Type_==summary_data],
 %	FollowingSummaries =
 %	  [N2 || {edge,N2,N1_,summary}<-Edges,{edge,N2_,N3_,input}<-Edges,
 %	         N3 <- Slices, N1 <- Slices, N1_==N1, N2_==N2, N3_==N3],
 	%NSlices=removeDuplicates(Slices++Parents++FollowingSummaries),
-	NSlices=removeDuplicates(Slices++Parents),
-	io:format("Diferences: ~w~n",[sets:to_list(sets:subtract(sets:from_list(NSlices),sets:from_list(Slices)))]),
-	case NSlices==Slices of
-		true -> NSlices;
-	     	_ -> sliceFrom(Nodes,Edges,NSlices,Followed)
+	%NSlices=removeDuplicates(Slices++Parents),
+	%New = sets:to_list(sets:subtract(sets:from_list(AccSlices++Slice),sets:from_list(Parents))),
+	io:format("\nParents: ~w   ParentsSD: ~w~n",[Parents, ParentsSD]),
+	io:format("\nBool1: ~w   Bool2: ~w~n",[(sets:subtract(sets:from_list(Parents),sets:from_list(AccSlices++Slices)) == sets:from_list([])), (sets:subtract(sets:from_list(ParentsSD),sets:from_list(AccSlices++Slices)) == sets:from_list([]))]),
+	StopCond = (sets:subtract(sets:from_list(Parents),sets:from_list(AccSlices++Slices)) == sets:from_list([])) 
+	  and (sets:subtract(sets:from_list(ParentsSD),sets:from_list(AccSlices++Slices)) == sets:from_list([])),
+	case StopCond of
+		true -> AccSlices++Slices;
+	     	_ -> sliceFrom(Nodes,Edges,removeDuplicates(ParentsSD),removeDuplicates(AccSlices++Slices),Followed,false)
+	     	     ++ sliceFrom(Nodes,Edges,removeDuplicates(Parents),removeDuplicates(AccSlices++Slices),Followed,true)
 	end.
+
+
+%sliceFrom(Nodes,Edges,Slices,AccSlices,Followed)->
+%    	io:format("Slices: ~w~n",[{lists:sort(sets:to_list(sets:from_list(Slices)))}]),
+%	Parents = [N_||N__<-Slices,Type<-Followed,
+%	       		{edge,N_,N,Type_}<-Edges,N==N__,Type_==Type],
+%        ParentsSD = [N_||N__<-Slices,{edge,N_,N,Type_}<-Edges,N==N__,Type_==summary_data],
+%%	FollowingSummaries =
+%%	  [N2 || {edge,N2,N1_,summary}<-Edges,{edge,N2_,N3_,input}<-Edges,
+%%	         N3 <- Slices, N1 <- Slices, N1_==N1, N2_==N2, N3_==N3],
+%	%NSlices=removeDuplicates(Slices++Parents++FollowingSummaries),
+%	NSlices=removeDuplicates(Slices++Parents),
+%	io:format("Diferences: ~w~n",[sets:to_list(sets:subtract(sets:from_list(NSlices),sets:from_list(Slices)))]),
+%	case NSlices==Slices of
+%		true -> {NSlices,AccSlices++ParentsSD};
+%	     	_ -> sliceFrom(Nodes,Edges,NSlices,AccSlices++ParentsSD,Followed)
+%	end.
+
 
 %sliceFrom(Nodes,Edges,Node)->
 %	SliceInput=sliceFollowingInputs(Nodes,Edges,[Node],[]),
