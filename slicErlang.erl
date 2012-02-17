@@ -44,7 +44,6 @@ graphForms([],Free,_,NodesAcum)->{[],[],Free,NodesAcum};
 graphForms([{function,_,Name,Arity,Clauses}|Funs],Free,VarsDict,NodesAcum) ->
     {NodesClauses,EdgesClauses,NFree,_,Firsts,Lasts,FLasts,_,NodesAcumN,_} = 
 	                               graphClauses(Clauses,Free+1, VarsDict, NodesAcum, func,[]),
-    %io:format("Dict ~p ~n",[Dict]),
     {NodesForms,EdgesForm,NNFree,NodesAcumNN} = graphForms(Funs,NFree,VarsDict,NodesAcumN),
     N_in = {node,Free,{function_in,Name,Arity,FLasts,Lasts}},
     { 
@@ -108,11 +107,7 @@ graphClauses([{clause,_,Patterns,Guards,Body}|Clauses],Free0,VD0,NodesAcum,From,
 			[NP_ || {node,NP_,{term,{var,_,_}}}<-N1, NP_==NP]  ==[]]
 		++EdgesBody_Body),
       	Free4,
-      	%DictTemp2,%++VD3,
-      		%++[Entry||Entry={V1,_,_}<-VD3,{V2,_,_}<-DictTemp,V1/=V2],
-      		%++[Entry||Entry={V1,_,_}<-VD4,{V2,_,_}<-DictTemp,V1/=V2],
-      	%VD3++VD4,
-      	removeDuplicates(VD3++VD4),
+        removeDuplicates(VD3++VD4),
         [Free0]++F3,
         L2++L3,
         FL2++FL3,
@@ -188,7 +183,6 @@ graphExpression(Term={var,_,V},Free,VarsDict,pat,NodesAcum)->
         case V of
             '_' -> {[], VarsDict};
             _ ->
-            %io:format("graphExpression ~p~n",[existVarDict(V,VarsDict)]),
 	    case existVarDict(V,VarsDict) of
 		true -> 	                       		    	
 		    {[{edge,NodeDecl,Free,data} ||
@@ -202,7 +196,6 @@ graphExpression(Term={var,_,V},Free,VarsDict,pat,NodesAcum)->
     	    		    '_' -> VarsDict;
     	    		    _ -> VarsDict++[{V,[Free],undef}]
     			end,
-    		    %io:format("NewDict ~p~n",[NewDict]),
 		    {[],NewDict}
 	    end
 	end,
@@ -212,7 +205,7 @@ graphExpression(Term={var,_,V},Free,VarsDict,patArg,NodesAcum)->
     NewDict=
     	case V of
     	    '_' -> VarsDict;
-    	    _ -> VarsDict++[{V,[Free],[undef]}]
+    	    _ -> VarsDict++[{V,[Free],undef}]
     	end,
     {Ns,[],NFree, NewDict,First,Lasts,NodesAcumN};
 graphExpression(Term={var,_,V},Free,VarsDict,exp,NodesAcum)->
@@ -297,8 +290,6 @@ graphExpression(Term={'case',_,E,Cs0},Free,VarsDict,exp,NodesAcum)->
    % NNVarsDict = removeDuplicates(DictTemp1
     %		++ removeDuplicates([Entry ||Entry={V1,_,_}<-NNVarsDict_,{V2,_,_}<-DictTemp1,V1/=V2])),
     		%++ removeDuplicates([Entry ||Entry={V1,Decl1,PM1}<-VD4,{V2,_,_}<-DictTemp1,V1/=V2]),
-	%io:format("Post Clauses Case1 ~w~n",[NNVarsDict_]),
-        %io:format("Post Clauses Case2 ~w~n",[NNVarsDict]), 
     N_case = {node,Free,{'case',Term,FLasts,LastsClauses}},
     NodesAcumNNN = NodesAcumNN++[N_case],
     %REVISABLE S'unixen els lasts de la expressió en el node arrel del patro de les clausules
@@ -312,8 +303,6 @@ graphExpression(Term={'case',_,E,Cs0},Free,VarsDict,exp,NodesAcum)->
    % 	    {true,EdgesPM_,NNVarsDict_} -> io:format("Cas1 ~n"),{EdgesPM_,NNVarsDict_};
    % 	    _ -> io:format("Cas2 ~n"),{[],NNVarsDict}
    %     end,
-        %io:format("EdgesPM ~p~n",[EdgesPM]),
-    %{_,EdgesPM,NNNVarsDict}=graphMatchingListPattern(FPat,Free+1,NNVarsDict,NodesAcumNNN,io),
     {
      	[N_case]++NodesE++NodesClauses,
       	EdgesE
@@ -604,7 +593,7 @@ graphMatching(NP,NE,Dict,NodesAcum,From)->
                        			    io -> {true,[{edge,NE,NP,data}],Dict};
                        			    _ -> {true,[],Dict}
                        		        end;
-	                       	    _ ->%io:format("EdgeUse1~n"), 	
+	                       	    _ ->	
 	                       		case existVarDictGM(V,Dict,NP) of
 	                       		    true -> %Variable definida
 	                       		    	%{NodesPM,_}=findPMVar(V,Dict),
@@ -631,7 +620,7 @@ graphMatching(NP,NE,Dict,NodesAcum,From)->
 	                            	{NodesPM,_}=findPMVar(V,Dict),
 	                            	%io:format("NodesPM ~p~n",[NodesPM]),
 	                            	case NodesPM of
-	                            	    [undefined] -> {true,[{edge,NE,NP,data}], Dict};
+	                            	    undef -> {true,[{edge,NE,NP,data}], Dict};
 	                            	    _ ->{Return,_,DictTemp}=graphMatchingList(NP,NodesPM,Dict,NodesAcum,From),
 %	                                {Return,[{edge,NodeDecl,NP,summary_data}||NodeDecl<-NodesDecl]
 %	                                  		%++[{edge,NE,NP,summary_data}]
@@ -1237,7 +1226,7 @@ hasValue(Node,[_|Nodes],Dict) -> hasValue(Node,Nodes,Dict).
 	     
 	     
 	     
-	 	       	 	            
+%%%%%%%%%%%%%%%%%%%%%%%%  linkEntrysDict  %%%%%%%%%%%%%%%%%%%%%%%%%%%% 	 	       	 	            
 linkEntrysDict([]) -> [];
 linkEntrysDict([{V,ND,PM}|List]) -> 
     NDAll= getNDEntryDict(V,List),
@@ -1252,10 +1241,13 @@ linkEntrysDict([{V,ND,PM}|List]) ->
     [{V,ND++NDAll, PMAux++PMAll}]++linkEntrysDict(NewDict).
 				    
 
+%%%%%%%%%%%%%%%%%%%%%%%%  getNDEntryDict  %%%%%%%%%%%%%%%%%%%%%%%%%%%% 
 getNDEntryDict(_,[]) -> [];
 getNDEntryDict(V,[{V,ND,_}|List]) -> ND++getNDEntryDict(V,List);
 getNDEntryDict(V,[{_,_,_}|List]) -> getNDEntryDict(V,List).
 
+
+%%%%%%%%%%%%%%%%%%%%%%%%  getPMEntryDict  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 getPMEntryDict(_,[]) -> [];
 getPMEntryDict(V,[{V,_,NP}|List]) when NP/=undef -> NP++getPMEntryDict(V,List);
 getPMEntryDict(V,[{_,_,_}|List]) -> getPMEntryDict(V,List).			
