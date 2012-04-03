@@ -109,9 +109,44 @@
 %	f(X,Y) -> {A,B}=X.
 
 
-main()-> X={1,2},
-                f(X).
-f(X) -> {X1,X2}=X,X1.
+%main()-> X={1,2},
+%                f(X).
+%main() -> X={1,2},
+%	f(X).
+%
+%
+%f(X) -> {X1,X2}=X,
+%	f(X).
+
+
+
+
+%main(X) -> {X1,X2}=X,
+%	main(X).
+
+
+%XXXXXXXXXXXXXXXXXXXXXXXXX
+%main() -> X={1,2},
+%	w(X).
+%
+%w(X) -> f(X).
+%
+%f(X) ->	{X1,X2}=X,
+%	f(X).
+%XXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+%main() -> F=fun(X) -> X end,
+%	  F(1).
+%	  
+%f(X) -> X.
+
+
+%main() -> X={1,2},
+%	f(X).
+
+%f(X) -> {X1,X2}=X,f({X2,X1}).
+%f({X1,X2})-> f({X2,X1}).
 
 
 %	{Z31,Z32}=Z3,
@@ -260,19 +295,147 @@ f(X) -> {X1,X2}=X,X1.
 %g({Z,W})    -> 3;
 %g(_)        -> 4.
 
-
-%while(Sum, I,Top) ->
-%     if I==Top -> {Sum,Top};
-%        true ->if I==Top ->{0,0};
-%                 true-> {NSum,NI}=a(Sum, I),
-%                        while(NSum,NI,Top-1)
-%               end
-%     end.
+%main() ->%    Sum = 0,%    I = 1,%    {Result,_} = while(Sum,I,11),%    Result.
 %
-%a(X,Y)-> X,Y.
-%{add(X,Y),(fun (Z)->add(Z,1) end)(Y)}.
-
-%add(A,0)->A;
-%add(A,B) -> A.%+a(A,B).
+%while(Sum,I,Top) ->%    if%        I /= Top -> {NSum,NI} = a(Sum,I),%                    while(NSum,NI,Top-1);%        I == Top -> {Sum,Top}%    end.
+%   
+%a(X,Y) ->%    {add(X,Y),%    fun(Z)->add(Z,1) end(Y)}.
+%   
+%add(A,0) -> A;%add(A,B) -> A+B.
 %
-%t({0,0})->0.
+%main() -> A = {{1,2},3},
+%          f(A).
+%
+%main(X2,X1) ->
+%	X={X1,X2},
+%	g(X,X2).
+%	%Y={1,2} 
+%
+%%f(Y1,Y2) ->
+%%	g({Y1,Y2},Y2).
+%	
+%g(Z,Z2) -> h(Z).
+%	
+%h(Z) -> {X1,X2}=Z, 
+%	main(X1,X2).
+
+%
+
+
+%main() -> X=f(),g(X).
+%
+%f() -> {1,2}.
+%
+%g(X) -> Y= h(X),i(Y).
+%
+%h(X) -> X.
+%
+%i(X)-> {Z1,Z2} =X.
+
+
+%main(A) -> X=g(A).  
+%%	X={0,1},
+%%	 Y=g(X),
+%%	 {Y1,Y2}=Y.
+%%	 
+%g({a,A}) -> D=1,Y=2;
+%g({b,B}) -> E=1,Y=3;
+%g({c,c}) -> F=1,Y=4.
+	 
+	 
+	  
+
+
+%main()->{Z1,Z2}=f(0,0).
+%%f(X,Y)->g(X,Y).
+%%g(X,Y)->{X,Y}. 
+
+
+
+%main()->A={2,3},
+%	{Z1,Z2}=f(A).
+%%f(A)->g(A).
+%%g(A)->{X,Y}=A. 
+
+%main(X,Y) -> {A,B} = h(X,Y). 	
+%
+%h(X,Y) -> {X,Y}.
+
+
+%main(0) -> {X1,X2}=g(0).
+%g(0)->X={1,2},X.
+
+
+%PROBLEMA3
+%main(A) -> g(A).  
+%main(X) ->A={X,X}, g(A).
+%
+%g({a,A}) -> D=1,Y=2;
+%g({b,B}) -> E=1,Y=3;
+%g({c,c}) -> F=1,Y=4.
+
+%PROBLEMA2
+%main(X,Y) -> 
+%	     {A,B} = h(X,Y),
+%	     {Z1,Z2} = A. 	
+%
+%h(X,Y) -> {{X,1},Y}.
+
+%PROBLEMA1
+%main() -> A = {{1,2},3},
+%          {M1,M2}=f(A).
+%
+%f(Y) ->
+%	%Y=f(X1,X2),
+%	%Y={{1,2},3}, 
+%	{Z1,Z2}=Y,
+%	{A1,A2}=Z1.
+
+
+
+
+
+%main() -> A = {1,2},
+%          {A1,A2}=f(A),
+%          {B1,B2}=f(A).
+%%
+%f(Y) -> {F1,F2}=Y.
+%
+%g() ->  Z= {3,4},
+%	{C1,C2} = f(Z).
+
+
+%main() -> case 3 of
+%		3 -> X={0,0};
+%		_ -> X={1,1}
+%	  end,
+%	  {Z1,Z2}=X.
+
+
+
+main() -> A = {{1,2},3},
+          {M1,M2}=f(A).
+
+
+f(Y) ->
+	%Y=f(X1,X2),
+	%Y={{1,2},3}, 
+	{Z1,Z2}=Y,
+	{A1,A2}=Z1,
+	g(Z2).
+	
+g(Z) -> Y=h(Z),
+	Y.
+	
+
+h(X) -> X.
+
+
+
+
+
+
+%f(X)->{A,B}=X,
+%        {A1,A2}=A.
+%%main()->X={{1,2},3},
+%	f(X).

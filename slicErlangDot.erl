@@ -13,7 +13,8 @@ start(_) ->
 	{value,{Nodes,Edges},_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
     	{ok, Device} = file:open("shows.txt", [read]),
     	Shows={list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
-               list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")), 			list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
+               list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")), 		       list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
+               list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
     	ok=file:close(Device),
     	dotGraph(Nodes,Edges,"temp.dot",Shows).
     
@@ -102,7 +103,7 @@ dotNodeType(Type,Id,Slice)->
 
 
 dotEdges([],_)->"";
-dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary,ShowSummaryData})->
+dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary,ShowSummaryData,ShowSummaryInput, ShowSummaryOutput})->
 	%io:format("~p~n",[{edge,S,T,Type}]),
    	%"\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es).
    	case Type of
@@ -111,6 +112,8 @@ dotEdges([{edge,S,T,Type}|Es],Shows={ShowData,ShowInput,ShowOutput,ShowSummary,S
     	     output when (not ShowOutput)-> dotEdges(Es,Shows);
     	     summary when (not ShowSummary)-> dotEdges(Es,Shows); 
     	     summary_data when (not ShowSummaryData) -> dotEdges(Es,Shows);
+    	     summary_data_input when (not ShowSummaryInput) -> dotEdges(Es,Shows);
+    	     summary_data_output when (not ShowSummaryOutput) -> dotEdges(Es,Shows);
     	     _ -> "\t"++integer_to_list(S)++" -> "++integer_to_list(T)++" "++dotEdgesType(Type)++"\n"++dotEdges(Es,Shows)
     	end.
 	
@@ -120,10 +123,12 @@ dotEdgesType(Type) ->
 	case Type of
 		control -> "[color=black, penwidth=3];";
 		data -> "[color=red, constraint=false, style=\"dotted\"];";
-		input -> "[color=green3, penwidth=3,constraint=false, style=\"dashed\"];";
-		output -> "[color=green3, penwidth=6,constraint=false, style=\"dashed\"];";
+		input -> "[color=green3, penwidth=2,constraint=false, style=\"dotted\"];";
+		output -> "[color=green3, penwidth=4,constraint=false, style=\"dashed\"];";
 		summary -> "[color=brown, penwidth=7, constraint=false];";
 		summary_data -> "[color=blue, penwidth=1, constraint=false];";
+		summary_data_input -> "[color=goldenrod, penwidth=2, constraint=false];";
+		summary_data_output -> "[color= deeppink, penwidth=2, constraint=false];";
 		%, style=\"dotted\"];";
 		%structural -> "[color=blue, penwidth=3, style=\"dashed\"];"
 		_->""
