@@ -1,0 +1,78 @@
+* Look for improvements in refactorings or similar tools that our slicing will provided with respect previous approaches.
+  - [ ] Try to provide an example where the improvement can be clearly seen.
+* Try to integrate our basic EDG (i.e. without data, input, output arcs...) with the original Erlang's AST.
+  - [X] Research what others have done. :TAMA: 2016-09-09
+     - Wrangler
+        - Uses of slicer: [[https://github.com/RefactoringTools/wrangler/]]
+        - Wrangler works at the level of the AST and their slices returns a list of ASTs from a given AST of an expression.
+          - Research what are the AST that they are returning (I suppose that  they are the expressions affected by the slicing criterion)
+          - They uses backward and mostly forward slices
+* Could we work in Core level instead of AST level? Slicing is an analysis so maybe it is possible. 
+  - [ ] Research what others have done. 
+  - Related with {{Try to integrate our basic EDG (i.e. without data, input, output arcs...) with the original Erlang's AST.}}
+* Is there any relation between slicing and lazyness? 
+  - [X] Look for lazy evaluators for erlang   :TAMA:  2016-09-09 
+    [[https://github.com/ian-plosker/seq-erlang]]
+    [[https://github.com/vjache/erlang-zlists]]
+    [[http://erlangraymondtay.blogspot.com.es/2009/08/example-of-lazy-evaluation-for.html]]
+  - [X] Look for papers that talk about something related. :TAMA: 2016-09-19
+    [[www.cs.loyola.edu/~binkley/papers/fac06.ps]]
+    [[http://link.springer.com/article/10.1023/A:1025872819613]]
+* EDG observations 
+  :TAMA: 2016-09-18 
+  Based on [[Papers/Erlang Dependence Graph/Submitted/figures/EDG.pptx]]
+  - Value edges for lists and tuples should be control. Note that their orientation is the reverse of the rest of value edges
+  - I don't see the point of having a result node in list comprehensions
+  - Maybe we can have special nodes that when selected takes all their descendants. This is the case for pattern, list, compound pattern, etc. This could agilize the slicing process. 
+  - The explanation of the iterprocedural slicing is unclear. I think that we should provide an abstraction where each function/clause is related with others and how they are conected. 
+  - The nodes for variables should have a attribute that defines whether the varaibles is taking value or not. It can cover cases like: X = {1,2}, X = res(A) where las is forcing the same result. 
+  - try of catch is more or less a mix between try-catch and cases
+  - send should be treated like a call, indeed it is erlang:send/2
+  - spawn (not in the slides) is the same as send., i.e. a call. This will cover all its interfaces, i.e /1, /2, /3... 
+  - receive is like a case but withou selector expression and with an optional after
+  - records are syntactic sugar for tuples. Should be treated similar.
+  - maps are like records. Pretty similar. 
+  - an option to treat these two cases (and maybe new ones) is to summarize the whole structure in a single node with attributes like used variables or defined variables. With this solution we'll take the whole structure but we can forget this cases for the moment without having to restrict the test programs. 
+  - For receives we need to know who could be the sender of the message. We cannnot use dialyzer as it does not perform its analysis for concurrent elements. See the following example.
+
+  #+BEGIN_SRC erlang
+      -module(sr2_pt).
+
+      -export([main/0]).
+
+      main() ->
+        Self = self(),
+        A = 2,
+        B = 3,
+        Server = spawn(fun()  -> server(Self) end),
+        spawn(fun()  -> Server!A end),
+        receive 
+          continue ->
+            ok
+        end,
+        spawn(fun()  -> Server!B end),
+        receive 
+          {final_value, N} ->
+            io:format("Final value: ~p\n", [N])
+        end.
+
+      server(Parent) ->
+        A = 
+          receive 
+            X ->
+              r1(X)
+          end,
+        Parent!continue,
+        B = 
+          receive 
+            Y ->
+              r2(Y)
+          end,
+        Parent!{final_value, A + B}.
+
+      r1(M) ->
+        M.
+
+      r2(M) ->
+        M.
+  #+END_SRC
