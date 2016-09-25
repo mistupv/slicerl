@@ -1,7 +1,7 @@
 * Look for improvements in refactorings or similar tools that our slicing will provided with respect previous approaches.
   - [ ] Try to provide an example where the improvement can be clearly seen.
 * Try to integrate our basic EDG (i.e. without data, input, output arcs...) with the original Erlang's AST.
-  - [X] Research what others have done. ::TAMA:: 2016-09-09
+  - [X] Research what others have done. :TAMA: 2016-09-09
      - Wrangler
         - Uses of slicer: [[https://github.com/RefactoringTools/wrangler/]]
         - Wrangler works at the level of the AST and their slices returns a list of ASTs from a given AST of an expression.
@@ -11,15 +11,15 @@
   - [ ] Research what others have done. 
   - Related with {{Try to integrate our basic EDG (i.e. without data, input, output arcs...) with the original Erlang's AST.}}
 * Is there any relation between slicing and lazyness? 
-  - [X] Look for lazy evaluators for erlang   ::TAMA::  2016-09-09 
+  - [X] Look for lazy evaluators for erlang   :TAMA:  2016-09-09 
     [[https://github.com/ian-plosker/seq-erlang]]
     [[https://github.com/vjache/erlang-zlists]]
     [[http://erlangraymondtay.blogspot.com.es/2009/08/example-of-lazy-evaluation-for.html]]
-  - [X] Look for papers that talk about something related. ::TAMA:: 2016-09-19
+  - [X] Look for papers that talk about something related. :TAMA: 2016-09-19
     [[www.cs.loyola.edu/~binkley/papers/fac06.ps]]
     [[http://link.springer.com/article/10.1023/A:1025872819613]]
 * EDG observations 
-  ::TAMA:: 2016-09-18 
+  :TAMA: 2016-09-18 
   Based on [[Papers/Erlang Dependence Graph/Submitted/figures/EDG.pptx]]
   - Value edges for lists and tuples should be control. Note that their orientation is the reverse of the rest of value edges
   - I don't see the point of having a result node in list comprehensions
@@ -32,7 +32,7 @@
   - receive is like a case but withou selector expression and with an optional after
   - records are syntactic sugar for tuples. Should be treated similar.
   - maps are like records. Pretty similar. 
-  - an option to treat these two cases (and maybe new ones) is to summarize the whole structure in a single node with attributes like used variables or defined variables. With this solution we'll take the whole structure but we can forget this cases for the moment without having to restrict the test programs. 
+  - an option to treat these two cases (and maybe new ones) is to summarize the whole structure in a single node with attributes like used variables or defined variables. With this solution we'll take the whole structure but we can forget these cases for the moment without having to restrict the test programs. 
   - For receives we need to know who could be the sender of the message. We cannnot use dialyzer as it does not perform its analysis for concurrent elements. See the following example.
 
   #+BEGIN_SRC erlang
