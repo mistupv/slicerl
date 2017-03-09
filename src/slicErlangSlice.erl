@@ -20,7 +20,7 @@ start(Node, File) ->
     	% Shows={list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),
      %       list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
     	% ok=file:close(DeviceS),
-    	Shows = {true, true, true, true},
+    	% Shows = {true, true, true, true},
     	{ok,FileContentBin}=file:read_file(File),
     	FileContent=binary_to_list(FileContentBin),
     	%Selected=string:substr(FileContent,StartPosition,EndPosition-StartPosition),
@@ -44,7 +44,7 @@ start(Node, File) ->
 	    % 	{NodesAux,_,_,_}=slicErlang:graphForms(Forms,0,[],[]),
 	    % 	%io:format("~w~n",[{NodesAux}]),
 	    IdSC = [Node],
-	    io:format("IdSC:~w~n",[IdSC]),
+	    % io:format("IdSC:~w~n",[IdSC]),
 	    % 	IdSC=searchSlicingCriterion(NodesAux),
 	%    	IdSC=[IdSC_||{node,IdSC_,{expression,{atom,_,slicing_criterion}}}<-NodesAux]
 	%            ++[IdSC_||{node,IdSC_,{pattern,{atom,_,slicing_criterion}}}<-NodesAux],
@@ -54,9 +54,9 @@ start(Node, File) ->
 	    	case IdSC of
 	        	[] -> io:format("Selected code is not valid to perform slicing~n");
 	         	_ ->  %[NodeSlice|_]=IdSC,
-	               		io:format("Slice from nodes ~w~n",[IdSC]),
+	               		% io:format("Slice from nodes ~w~n",[IdSC]),
 	               		Slice=sliceFromList(Nodes,Edges,removeDuplicates(IdSC)),
-	               		slicErlangDot:dotGraph(Nodes,Edges,"temp_slice.dot",Shows,Slice),
+	               		% slicErlangDot:dotGraph(Nodes,Edges,"temp_slice.dot",Shows,Slice),
 	               		{ok, DeviceSerialME} = file:open("modname_exports", [read]),
 			    	ME=io:get_line(DeviceSerialME,""),
 			    	ok=file:close(DeviceSerialME),
