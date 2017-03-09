@@ -3,12 +3,30 @@
 %%! -pa ebin 
 
 
-main([File, Node]) ->  
-	slicErlang:start(File, false),
-	slicErlangSlice:start(list_to_integer(Node), File);
+main([
+		"-i", FileIn, 
+		"-o", FileOut, 
+		"-os", OffsetStart, 
+		"-oe", OffsetEnd
+	]) -> 
+	{Ini, End} = 
+
+		try  
+			{list_to_integer(OffsetStart), list_to_integer(OffsetEnd)}
+		catch 
+			_:_ -> 
+				{-1, -1}
+		end,
+	case {Ini, End} of 
+		{-1, -1} -> 
+			usage();
+		_ -> 
+			slicErlang:start(FileIn, false),
+			slicErlangSlice:start(Ini, End, FileIn, FileOut)
+	end;
 main(_) ->
     usage().
 
 usage() ->
-    io:format("usage: slicerl file node\n"),
+    io:format("usage: slicerl -i file -o file -os offset_start -oe offset_end\n"),
     halt(1). 

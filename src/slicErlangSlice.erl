@@ -1,8 +1,8 @@
 -module(slicErlangSlice).
 
--export([start/2, reachablesForward/2]).
+-export([start/4, reachablesForward/2]).
 
-start(Node, File) ->
+start(StartPosition, EndPosition, FileI, FileO) ->
 	{ok, DeviceSerialR} = file:open("temp.serial", [read]),
     	Graph=io:get_line(DeviceSerialR,""),
     	ok=file:close(DeviceSerialR),
@@ -21,35 +21,46 @@ start(Node, File) ->
      %       list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
     	% ok=file:close(DeviceS),
     	% Shows = {true, true, true, true},
-    	{ok,FileContentBin}=file:read_file(File),
+    	{ok,FileContentBin}=file:read_file(FileI),
     	FileContent=binary_to_list(FileContentBin),
-    	%Selected=string:substr(FileContent,StartPosition,EndPosition-StartPosition),
-    	%io:format("~p~n",[Selected++"."]),
-%    	Exp=
-%    	case erl_scan:string(Selected++".") of
-%       	{ok,Tok,_}->	case erl_parse:parse_exprs(Tok) of
-%               			{ok,[Exp_]}->Exp_;
-%               			_->{}
-%      				end;
-%       	_->{}
-%    	end,
-    	% NFileContent=string:substr(FileContent,1,StartPosition-1)
-     %             ++"slicing_criterion"
-     %             ++string:substr(FileContent,EndPosition,(length(FileContent)-EndPosition)+1),
-    	% ok=file:write_file("temp_aux.erl",list_to_binary(NFileContent)),
-    	% case smerl:for_file("temp_aux.erl") of 
-    	% {ok,Abstract} -> 
-	    % 	Forms_=lists:reverse(smerl:get_forms(Abstract)),
-	    % 	Forms = [Form||Form={function,_,_,_,_}<-Forms_],
-	    % 	{NodesAux,_,_,_}=slicErlang:graphForms(Forms,0,[],[]),
-	    % 	%io:format("~w~n",[{NodesAux}]),
-	    IdSC = [Node],
-	    % io:format("IdSC:~w~n",[IdSC]),
-	    % 	IdSC=searchSlicingCriterion(NodesAux),
-	%    	IdSC=[IdSC_||{node,IdSC_,{expression,{atom,_,slicing_criterion}}}<-NodesAux]
-	%            ++[IdSC_||{node,IdSC_,{pattern,{atom,_,slicing_criterion}}}<-NodesAux],
-		%[_|IdSC_]=lists:reverse(io:get_line("CS? :")),
-		%IdSC=[list_to_integer(lists:reverse(IdSC_))],
+    	Selected=string:substr(FileContent,StartPosition,EndPosition-StartPosition),
+    	io:format("~s~n",[Selected++"."]),
+   	Exp=
+	   	case erl_scan:string(Selected++".") of
+	      	{ok,Tok,_}->	case erl_parse:parse_exprs(Tok) of
+	              			{ok,[Exp_]}->Exp_;
+	              			_->{}
+	     				end;
+	      	_->{}
+	   	end,
+	    IdSC=
+	    	case Exp of 
+	    		{} -> 
+	    			[];
+	    		_ -> 
+	    		    NFileContent=string:substr(FileContent,1,StartPosition-1)
+			                 ++"slicing_criterion"
+			                 ++string:substr(FileContent,EndPosition,(length(FileContent)-EndPosition)+1),
+			    	ok=file:write_file("temp_aux.erl",list_to_binary(NFileContent)),
+			    	% case smerl:for_file("temp_aux.erl") of 
+				    % 	%io:format("~w~n",[{NodesAux}]),
+				    % IdSC = [Node],
+				    % io:format("IdSC:~w~n",[IdSC]),
+			    	case  smerl:for_file("temp_aux.erl") of
+			    	    {ok,Abstract} -> 
+			    			Forms_=lists:reverse(smerl:get_forms(Abstract)),
+			    			Forms = [Form||Form={function,_,_,_,_}<-Forms_],
+			    			{NodesAux,_,_,_}=slicErlang:graphForms(Forms,0,[],[]), 
+			    			searchSlicingCriterion(NodesAux);
+			    		_ ->
+			    		 	[]		
+			    	end
+			end,
+	    file:delete("temp_aux.erl"),
+	   	% IdSC=[IdSC_||{node,IdSC_,{expression,{atom,_,slicing_criterion}}}<-NodesAux]
+	    %        ++[IdSC_||{node,IdSC_,{pattern,{atom,_,slicing_criterion}}}<-NodesAux],
+		% [_|IdSC_]=lists:reverse(io:get_line("CS? :")),
+		% IdSC=[list_to_integer(lists:reverse(IdSC_))],
 		%io:format("IdSC:~w~n",[IdSC]),
 	    	case IdSC of
 	        	[] -> io:format("Selected code is not valid to perform slicing~n");
@@ -64,13 +75,13 @@ start(Node, File) ->
 			    	{ok,Tokens_,_EndLine_} = erl_scan:string(ME++"."),
 				{ok,AbsForm_} = erl_parse:parse_exprs(Tokens_),
 				{value,{ModName,Exports},_Bs_} = erl_eval:exprs(AbsForm_, erl_eval:new_bindings()),
-	               		{ok, DeviceErl} = file:open("tempSliced.erl", [write]),
+	               		{ok, DeviceErl} = file:open(FileO, [write]),
 	               		ok=file:write(DeviceErl,restore(Nodes,Edges,ModName,Exports,Slice)),
 	               		file:close(DeviceErl)
 	    	end.
 	    % _ ->
 	    % 	io:format("Selected code is not valid to perform slicing~n")
-        % end.
+     %    end.
     
 removeDuplicates(List) -> sets:to_list(sets:from_list(List)).
    
