@@ -2,10 +2,10 @@
 
 %falta tratar las lists comprehensions en las funcones que iteran en la sintaxis
 
--export([getFunTypes/0,getFunTypes/2]).
+-export([getFunTypes/1,getFunTypes/2]).
 
-getFunTypes() ->
-    {ok,Abstract} = smerl:for_file("temp.erl"),
+getFunTypes(File) ->
+    {ok,Abstract} = smerl:for_file(File),
     getFunTypes(lists:reverse(smerl:get_forms(Abstract)),Abstract).
     
 getFunTypes(Forms,Abstract) ->
@@ -14,7 +14,9 @@ getFunTypes(Forms,Abstract) ->
     NNAbstract=smerl:set_module(NAbstract, temp_tt),
     smerl:to_src(NNAbstract, "temp_tt.erl"),
     % typer:get_type_inside_erl(["--plt",".dialyzer_plt","--show", "temp_tt.erl"]).
-    typer:get_type_inside_erl(["--show", "temp_tt.erl"]).
+    Types = typer:get_type_inside_erl(["--show", "temp_tt.erl"]),
+    file:delete("temp_tt.erl"),
+    Types.
     
 typeTransformation([],_,_)->[];
 typeTransformation([{function,LINE,Name,Arity,Clauses}|Funs],IdCalls,IdAF)->

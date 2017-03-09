@@ -1,0 +1,14 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -pa ebin 
+
+
+main([File]) ->  
+	slicErlang:start(File, true),
+	os:cmd("dot -Tpdf temp.dot > temp.pdf");
+main(_) ->
+    usage().
+
+usage() ->
+    io:format("usage: edg file\n"),
+    halt(1). 

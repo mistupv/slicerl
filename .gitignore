@@ -2,3 +2,7 @@
 old_content/*
 
 *.beam
+
+temp.dot
+
+temp.pdf

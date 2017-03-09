@@ -1,0 +1,13 @@
+#!/usr/bin/env escript
+%% -*- erlang -*-
+%%! -pa ebin 
+
+main([File, Node]) ->  
+	slicErlang:start(File, false),
+	slicErlangSlice:start(list_to_integer(Node), File);
+main(_) ->
+    usage().
+
+usage() ->
+    io:format("usage: slicerl file node\n"),
+    halt(1). 

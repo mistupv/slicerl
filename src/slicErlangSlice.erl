@@ -1,11 +1,12 @@
 -module(slicErlangSlice).
 
--export([start/1, reachablesForward/2]).
+-export([start/2, reachablesForward/2]).
 
-start(Node) ->
+start(Node, File) ->
 	{ok, DeviceSerialR} = file:open("temp.serial", [read]),
     	Graph=io:get_line(DeviceSerialR,""),
     	ok=file:close(DeviceSerialR),
+    file:delete("temp.serial"),
     	{ok,Tokens,_EndLine} = erl_scan:string(Graph++"."),
 	{ok,AbsForm} = erl_parse:parse_exprs(Tokens),
 	{value,{Nodes,Edges},_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
@@ -15,11 +16,12 @@ start(Node) ->
     % 	{ok, DeviceEnd} = file:open("end.txt", [read]),
     % 	EndPosition=list_to_integer(lists:subtract(io:get_line(DeviceEnd,""),"\n"))+1,
     % 	ok=file:close(DeviceEnd),
-    	{ok, DeviceS} = file:open("shows.txt", [read]),
-    	Shows={list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),
-           list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
-    	ok=file:close(DeviceS),
-    	{ok,FileContentBin}=file:read_file("temp.erl"),
+    	% {ok, DeviceS} = file:open("shows.txt", [read]),
+    	% Shows={list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),
+     %       list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
+    	% ok=file:close(DeviceS),
+    	Shows = {true, true, true, true},
+    	{ok,FileContentBin}=file:read_file(File),
     	FileContent=binary_to_list(FileContentBin),
     	%Selected=string:substr(FileContent,StartPosition,EndPosition-StartPosition),
     	%io:format("~p~n",[Selected++"."]),
@@ -58,6 +60,7 @@ start(Node) ->
 	               		{ok, DeviceSerialME} = file:open("modname_exports", [read]),
 			    	ME=io:get_line(DeviceSerialME,""),
 			    	ok=file:close(DeviceSerialME),
+			    	file:delete("modname_exports"),
 			    	{ok,Tokens_,_EndLine_} = erl_scan:string(ME++"."),
 				{ok,AbsForm_} = erl_parse:parse_exprs(Tokens_),
 				{value,{ModName,Exports},_Bs_} = erl_eval:exprs(AbsForm_, erl_eval:new_bindings()),

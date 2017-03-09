@@ -1,12 +1,13 @@
-ROOT_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-ERLC_DIR = $(shell which erlc)
-ERLC_PATH = $(shell dirname $(lastword $(ERLC_DIR)))
+# ROOT_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+# ERLC_DIR = $(shell which erlc)
+# ERLC_PATH = $(shell dirname $(lastword $(ERLC_DIR)))
 
 
 compile:
 	@rm -Rf ebin
 	@mkdir ebin
 	@erlc -o ebin src/*.erl 
+	@./check_dialyzer
 
 clean:
 	@rm -Rf ebin

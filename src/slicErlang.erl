@@ -3,10 +3,10 @@
 
 -module(slicErlang).
 
--export([start/1,graphForms/4]).
+-export([start/2,graphForms/4]).
 
 
-start(File) ->
+start(File, GenerateOutput) ->
     {ok,Abstract} = smerl:for_file(File),
     Forms_=lists:reverse(smerl:get_forms(Abstract)),
     Exports = smerl:get_exports(Abstract),
@@ -35,11 +35,16 @@ start(File) ->
     SummaryEdges = buildSummaryEdges(Edges++InputOutputEdges,ReachablePatterns,CallsInfo),
    	
     NEdges = Edges++InputOutputEdges++SummaryEdges,
-    
     {ok, DeviceSerial} = file:open("temp.serial", [write]),
     io:write(DeviceSerial,{Nodes,NEdges}),
     ok = file:close(DeviceSerial),
-    slicErlangDot:start(0).
+    case GenerateOutput of 
+      true -> 
+        file:delete("modname_exports"),
+        slicErlangDot:start(0);
+      false -> 
+        ok
+    end.
 
 
 
@@ -1139,7 +1144,8 @@ buildClauseInfo(Nodes,Edges,[NClause|NClauses],ClausesTypeInfo)->
 addTypeInfo([],_,_)->[];
 addTypeInfo([{NCall,NodeCalled,NodesArgs,NodeReturn}|CallsInfo],TypeInfo,Id)->
     TC=list_to_atom("transformed_call"++integer_to_list(Id)),
-    %io:format("TC: ~p~n",[TC]),
+    % io:format("TC: ~p~n",[TC]),
+    % io:format("TypeInfo: ~p~n",[TypeInfo]),
     %ListTypes_= [begin io:format(io:format("NCall:~p\nlength(NodesArgs):~p\nArgsTypes_:~p\n\n",[NCall,length(NodesArgs),ArgsTypes_])),{RetType,lists:split(length(NodesArgs),ArgsTypes_)} end ||
     ListTypes_= [{RetType,lists:split(length(NodesArgs),ArgsTypes_)} ||
   					{TC_,_,{RetType,ArgsTypes_},_}<-TypeInfo,
@@ -1192,10 +1198,10 @@ existVarDictGM(V,[_ | Dict],NP) -> existVarDictGM(V,Dict,NP);
 existVarDictGM(_,[],_)->false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%  existVarDictUndef  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
-existVarDictUndef(V,[{V,_,undef} | _]) -> false;
-existVarDictUndef(V,[{V,_,_} | _]) -> true;
-existVarDictUndef(V,[_ | Dict]) -> existVarDictUndef(V,Dict);
-existVarDictUndef(_,[])->false.
+% existVarDictUndef(V,[{V,_,undef} | _]) -> false;
+% existVarDictUndef(V,[{V,_,_} | _]) -> true;
+% existVarDictUndef(V,[_ | Dict]) -> existVarDictUndef(V,Dict);
+% existVarDictUndef(_,[])->false.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%  getNumNodes  %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1256,21 +1262,21 @@ allArgsHold(F,[TCa|TCas],[TCl|TCls])->
   	
   	
 %%%%%%%%%%%%%%%%%%%%%%%%  hasValue  %%%%%%%%%%%%%%%%%%%%%%%%%%%% 
-hasValue(_,[],_) -> false;
-hasValue(Node,[{node,NumNode,Type}|_],Dict) when Node==NumNode ->
-    case Type of
-    	{term,TermNC} -> 
-	    case TermNC of
-	 	{var,_,V} -> 
-	 	    case V of
-	 	        '_' -> true;
-	 	        _ -> existVarDictUndef(V,Dict)
-	 	    end;
-	 	_ -> true
-	    end;
-	_ -> true
-    end;
-hasValue(Node,[_|Nodes],Dict) -> hasValue(Node,Nodes,Dict).	    
+% hasValue(_,[],_) -> false;
+% hasValue(Node,[{node,NumNode,Type}|_],Dict) when Node==NumNode ->
+%     case Type of
+%     	{term,TermNC} -> 
+% 	    case TermNC of
+% 	 	{var,_,V} -> 
+% 	 	    case V of
+% 	 	        '_' -> true;
+% 	 	        _ -> existVarDictUndef(V,Dict)
+% 	 	    end;
+% 	 	_ -> true
+% 	    end;
+% 	_ -> true
+%     end;
+% hasValue(Node,[_|Nodes],Dict) -> hasValue(Node,Nodes,Dict).	    
 	     
 	     
 	     
