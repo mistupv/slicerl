@@ -2,7 +2,11 @@
 
 -export([start/4, reachablesForward/2]).
 
-start(StartPosition, EndPosition, FileI, FileO) ->
+start(StartPosition0, EndPosition0, FileI, FileO) ->
+	StartPosition = 
+		StartPosition0 + 1,
+	EndPosition = 
+		EndPosition0 + 1,
 	{ok, DeviceSerialR} = file:open("temp.serial", [read]),
     	Graph=io:get_line(DeviceSerialR,""),
     	ok=file:close(DeviceSerialR),
