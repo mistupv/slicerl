@@ -25,8 +25,9 @@ start(StartPosition0, EndPosition0, FileI, FileO) ->
      %       list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n")),list_to_atom(lists:subtract(io:get_line(DeviceS,""),"\n"))},
     	% ok=file:close(DeviceS),
     	% Shows = {true, true, true, true},
-    	{ok,FileContentBin}=file:read_file(FileI),
-    	FileContent=binary_to_list(FileContentBin),
+    	% {ok,FileContentBin}=file:read_file(FileI),
+    	% FileContent=binary_to_list(FileContentBin),
+    	FileContent = read_file(FileI),
     	Selected=string:substr(FileContent,StartPosition,EndPosition-StartPosition),
     	io:format("~s~n",[Selected++"."]),
    	Exp=
@@ -45,7 +46,8 @@ start(StartPosition0, EndPosition0, FileI, FileO) ->
 	    		    NFileContent=string:substr(FileContent,1,StartPosition-1)
 			                 ++"slicing_criterion"
 			                 ++string:substr(FileContent,EndPosition,(length(FileContent)-EndPosition)+1),
-			    	ok=file:write_file("temp_aux.erl",list_to_binary(NFileContent)),
+			        % io:format("~s", [NFileContent]),
+			    	ok=file:write_file("temp_aux.erl",list_to_binary(NFileContent), [{encoding, utf8}]),
 			    	% case smerl:for_file("temp_aux.erl") of 
 				    % 	%io:format("~w~n",[{NodesAux}]),
 				    % IdSC = [Node],
@@ -57,6 +59,7 @@ start(StartPosition0, EndPosition0, FileI, FileO) ->
 			    			{NodesAux,_,_,_}=slicErlang:graphForms(Forms,0,[],[]), 
 			    			searchSlicingCriterion(NodesAux);
 			    		_ ->
+			    			% io:format("\nENTRA\n"),
 			    		 	[]		
 			    	end
 			end,
@@ -392,7 +395,33 @@ restoreExpression(Nodes,Edges,Slice,VN,FunsDict,Node)->
 	       end
      end.
      
-    
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Input
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+read_file(File) ->
+	{ok, IoDevice} = 
+		file:open(File, [read, {encoding, utf8}]),
+    Binary = read(IoDevice),
+    binary_to_list(Binary). 
+    % Res = binary:split(Binary, [<<"\n">>], [global]),
+    % [NM] = [binary_to_list(R) || R <- Res],
+    % [N, M] = str2intlist(NM),
+    % {N, M}.
+
+-define(BLK_SIZE, 16384).
+
+read(IoDevice) ->
+    ok = io:setopts(IoDevice, [binary]),
+    read(IoDevice, <<>>).
+
+read(IoDevice, Acc) ->
+    case file:read(IoDevice, ?BLK_SIZE) of
+        {ok, Data} ->
+            read(IoDevice, <<Acc/bytes, Data/bytes>>);
+        eof ->
+            Acc
+    end.
 
 %restoreExpression(Nodes,Edges,Slice,FunsDict,Node,Expression)->
 %	Structurals=lists:sort([{N,NExpr}||NSon<-[ND||{edge,NO,ND,structural}<-Edges,NO==Node],{node,N,NExpr}<-Nodes,N==NSon]),
