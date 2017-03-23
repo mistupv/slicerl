@@ -81,10 +81,11 @@ start(StartPosition0, EndPosition0, FileI, FileO) ->
 			    	file:delete("modname_exports"),
 			    	{ok,Tokens_,_EndLine_} = erl_scan:string(ME++"."),
 				{ok,AbsForm_} = erl_parse:parse_exprs(Tokens_),
-				{value,{ModName,Exports},_Bs_} = erl_eval:exprs(AbsForm_, erl_eval:new_bindings()),
-	               		{ok, DeviceErl} = file:open(FileO, [write]),
-	               		ok=file:write(DeviceErl,restore(Nodes,Edges,ModName,Exports,Slice)),
-	               		file:close(DeviceErl)
+				{value,{_,Exports},_Bs_} = erl_eval:exprs(AbsForm_, erl_eval:new_bindings()),
+				ModName = list_to_atom(filename:basename(FileO, filename:extension(FileO))),
+           		{ok, DeviceErl} = file:open(FileO, [write]),
+           		ok=file:write(DeviceErl,restore(Nodes,Edges,ModName,Exports,Slice)),
+           		file:close(DeviceErl)
 	    	end.
 	    % _ ->
 	    % 	io:format("Selected code is not valid to perform slicing~n")
