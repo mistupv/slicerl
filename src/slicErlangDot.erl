@@ -12,11 +12,10 @@ start(_) ->
     	{ok,Tokens,_EndLine} = erl_scan:string(Graph++"."),
 	{ok,AbsForm} = erl_parse:parse_exprs(Tokens),
 	{value,{Nodes,Edges},_Bs} = erl_eval:exprs(AbsForm, erl_eval:new_bindings()),
-    	% {ok, Device} = file:open("shows.txt", [read]),
-    	% Shows={list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
-               % list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
-        Shows = {true, true, true, true},
-    	% ok=file:close(Device),
+        {ok, Device} = file:open("shows.txt", [read]),
+        Shows={list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),
+               list_to_atom(lists:subtract(io:get_line(Device,""),"\n")),list_to_atom(lists:subtract(io:get_line(Device,""),"\n"))},
+        ok=file:close(Device),
     	dotGraph(lists:sort(Nodes),lists:sort(Edges),"temp.dot",Shows).
     
     

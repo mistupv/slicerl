@@ -1,24 +1,16 @@
-# ROOT_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-# ERLC_DIR = $(shell which erlc)
-# ERLC_PATH = $(shell dirname $(lastword $(ERLC_DIR)))
+BEAM_FILES = $(patsubst src/%.erl,ebin/%.beam,$(wildcard src/**.erl))
 
+compile: ebin/ $(BEAM_FILES)
 
-compile:
-	@rm -Rf ebin
-	@mkdir ebin
-	@erlc -o ebin src/*.erl 
-	@./check_dialyzer
+ebin/%.beam: src/%.erl
+	erlc -o ebin $<
+
+ebin/:
+	mkdir -p ebin
+
+dialyzer:
+	dialyzer --build_plt --apps erts kernel stdlib mnesia --output_plt .dialyzer_plt
 
 clean:
-	@rm -Rf ebin
-	@find . -name '*.dump' -prune -exec rm -fr {} \;
-
-# install:
-# 	@make script_install FILE=pn_tools
-# 	@make script_install FILE=pn_slicer
-# 	@make script_install FILE=pn_prop
-
-# script_install:
-# 	@erl -pa ebin -run make_script from_path $(ROOT_DIR) $(FILE) -noshell -s erlang halt
-# 	@chmod +x "$(FILE)_temp"
-# 	@mv -f "$(FILE)_temp" $(ERLC_PATH)/$(FILE)
+	rm -rf ebin
+	rm -rf .dialyzer_plt
