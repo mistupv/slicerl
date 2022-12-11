@@ -27,7 +27,7 @@ dotGraph(Nodes,Edges,Name,Shows,Slice)->
 	ok=file:write_file(Name, list_to_binary("digraph PDG {\n"++dotNodes(Nodes,Slice)++dotEdges(Edges,Shows)++"}")).
 
 dotGraph(Nodes,Edges,Name,Shows)->
-	file:write_file(Name, list_to_binary("digraph PDG {\n"++dotNodes(Nodes)++dotEdges(Edges,Shows)++"}")).
+	ok=file:write_file(Name, list_to_binary("digraph PDG {\n"++dotNodes(Nodes)++dotEdges(Edges,Shows)++"}")).
 
 dotNodes([])->"";
 dotNodes([{node,Id,Type}|Ns])->
